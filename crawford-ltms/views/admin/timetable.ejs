@@ -1,0 +1,16 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Timetable</div><h1 class="h3 mb-0">Master timetable</h1></div>
+  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+</div>
+
+<% if (!session) { %>
+  <div class="text-center py-5 text-secondary"><h3 class="h5 text-dark">No active session</h3><p>Activate a session first.</p></div>
+<% } else { %>
+  <div class="card"><div class="card-body">
+    <h2 class="h6 card-title"><i class="fa-solid fa-table-cells me-1 text-secondary"></i> Every scheduled class, university-wide</h2>
+    <p class="text-secondary small">Shows every non-rejected entry with a timeslot assigned — draft, awaiting approval, or published. Click a course code for the full picture.</p>
+    <%- include('../partials/timetable-grid', { entries, bands }) %>
+  </div></div>
+<% } %>
+
+<%- include('../partials/course-detail-modal') %>

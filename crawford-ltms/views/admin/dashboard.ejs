@@ -1,0 +1,75 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div>
+    <div class="kicker">Registrar / Academic Affairs</div>
+    <h1 class="h3 mb-0">Dashboard</h1>
+  </div>
+  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+</div>
+
+<% if (!session) { %>
+  <div class="text-center py-5 text-secondary">
+    <i class="fa-regular fa-calendar-xmark fa-2x mb-2 d-block text-secondary"></i>
+    <h3 class="h5 text-dark">No active academic session</h3>
+    <p>Create and activate a session to begin setting up the timetable.</p>
+    <a class="btn btn-gold" href="/admin/sessions"><i class="fa-solid fa-plus me-1"></i> Set up a session</a>
+  </div>
+<% } else { %>
+  <div class="row g-3 row-cols-2 row-cols-lg-5 mb-4">
+    <div class="col"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+      <span class="stat-icon"><i class="fa-solid fa-landmark"></i></span>
+      <div><div class="stat-num"><%= counts.faculties %></div><div class="text-secondary small">Faculties</div></div>
+    </div></div></div>
+    <div class="col"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+      <span class="stat-icon"><i class="fa-solid fa-building-columns"></i></span>
+      <div><div class="stat-num"><%= counts.departments %></div><div class="text-secondary small">Departments</div></div>
+    </div></div></div>
+    <div class="col"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+      <span class="stat-icon"><i class="fa-solid fa-book"></i></span>
+      <div><div class="stat-num"><%= counts.courses %></div><div class="text-secondary small">Courses</div></div>
+    </div></div></div>
+    <div class="col"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+      <span class="stat-icon"><i class="fa-solid fa-door-open"></i></span>
+      <div><div class="stat-num"><%= counts.venues %></div><div class="text-secondary small">Venues</div></div>
+    </div></div></div>
+    <div class="col"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+      <span class="stat-icon"><i class="fa-solid fa-user-graduate"></i></span>
+      <div><div class="stat-num"><%= counts.students %></div><div class="text-secondary small">Students</div></div>
+    </div></div></div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="card h-100"><div class="card-body">
+        <h2 class="h6 card-title"><i class="fa-solid fa-diagram-project me-1 text-secondary"></i> Timetable pipeline — <%= session.name %></h2>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <% ['draft','lecturer_ok','hod_ok','final','published','shortfall'].forEach(function(s){ %>
+            <span class="badge badge-<%= s %>"><%= s.replace('_',' ') %>: <%= statusCounts[s] || 0 %></span>
+          <% }) %>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+          <a class="btn btn-gold" href="/admin/allocation"><i class="fa-solid fa-gears me-1"></i> Open allocation engine</a>
+          <a class="btn btn-outline-secondary" href="/admin/publish"><i class="fa-solid fa-paper-plane me-1"></i> Publish queue</a>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card h-100"><div class="card-body">
+        <h2 class="h6 card-title"><i class="fa-solid fa-triangle-exclamation me-1 text-secondary"></i> Capacity shortfalls</h2>
+        <% if (!shortfalls.length) { %>
+          <p class="text-secondary mb-0"><i class="fa-solid fa-circle-check text-success me-1"></i> No shortfalls flagged. Every course fits an available venue.</p>
+        <% } else { %>
+          <div class="table-responsive"><table class="table table-hover align-middle mb-2">
+            <thead><tr><th>Course</th><th>Registered</th></tr></thead>
+            <tbody>
+            <% shortfalls.forEach(function(s){ %>
+              <tr><td><%= s.code %> — <%= s.title %></td><td><%= s.registered_count %></td></tr>
+            <% }) %>
+            </tbody>
+          </table></div>
+          <p class="form-text mb-0">These need a larger venue added, or manual admin review.</p>
+        <% } %>
+      </div></div>
+    </div>
+  </div>
+<% } %>

@@ -1,0 +1,41 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Student</div><h1 class="h3 mb-0">Course registration</h1></div>
+  <div class="d-flex gap-2">
+    <% if (session) { %>
+      <span class="badge bg-light text-dark border"><%= session.name %></span>
+      <% if (session.reg_locked) { %><span class="badge badge-shortfall">Registration locked</span><% } %>
+    <% } %>
+  </div>
+</div>
+
+<div class="card"><div class="card-body">
+  <% if (!offerings.length) { %>
+    <p class="text-secondary mb-0">No courses offered for your level yet this session.</p>
+  <% } else { %>
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead><tr><th>Code</th><th>Title</th><th>Units</th><th>Lecturer</th><th>Dept</th><th></th></tr></thead>
+      <tbody>
+      <% offerings.forEach(function(o){ %>
+        <tr>
+          <td class="font-monospace"><%= o.code %></td>
+          <td><%= o.title %></td>
+          <td><%= o.credit_units %></td>
+          <td><%= o.lecturer_name || 'TBA' %></td>
+          <td><%= o.dept_name %></td>
+          <td>
+            <% if (myOfferingIds.has(o.id)) { %>
+              <form method="POST" action="/student/register/<%= o.id %>/drop">
+                <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-xmark me-1"></i> Drop</button>
+              </form>
+            <% } else { %>
+              <form method="POST" action="/student/register/<%= o.id %>">
+                <button class="btn btn-sm btn-gold" type="submit" <%= session.reg_locked ? 'disabled' : '' %>><i class="fa-solid fa-plus me-1"></i> Register</button>
+              </form>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div></div>

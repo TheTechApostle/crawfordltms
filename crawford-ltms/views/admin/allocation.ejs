@@ -1,0 +1,41 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Timetable</div><h1 class="h3 mb-0">Allocation engine</h1></div>
+  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+</div>
+
+<% if (!session) { %>
+  <div class="text-center py-5 text-secondary"><h3 class="h5 text-dark">No active session</h3><p>Activate a session first.</p></div>
+<% } else { %>
+  <div class="card mb-3"><div class="card-body">
+    <h2 class="h6 card-title"><i class="fa-solid fa-gears me-1 text-secondary"></i> Best-Fit Decreasing allocation</h2>
+    <p class="text-secondary">Sorts course offerings by registered students (largest first), sorts venues by capacity (largest first), then assigns each course the smallest venue that still fits it — checking lecturer and venue availability for the timeslot before confirming. Courses that don't fit any venue are flagged as a shortfall for manual review.</p>
+    <form method="POST" action="/admin/allocation/run">
+      <button class="btn btn-gold" type="submit"><i class="fa-solid fa-play me-1"></i> Run allocation engine</button>
+    </form>
+  </div></div>
+
+  <div class="card"><div class="card-body">
+    <h2 class="h6 card-title"><i class="fa-solid fa-table-cells me-1 text-secondary"></i> Draft grid</h2>
+    <% if (!entries.length) { %>
+      <p class="text-secondary mb-0">No entries yet — run the allocation engine.</p>
+    <% } else { %>
+      <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Course</th><th>Lecturer</th><th>Registered</th><th>Venue</th><th>Capacity</th><th>Fit ratio</th><th>Slot</th><th>Status</th></tr></thead>
+        <tbody>
+        <% entries.forEach(function(e){ %>
+          <tr>
+            <td><%= e.code %> — <%= e.title %></td>
+            <td><%= e.lecturer_name || 'Unassigned' %></td>
+            <td><%= e.registered_count %></td>
+            <td><%= e.venue_name || '—' %></td>
+            <td><%= e.capacity || '—' %></td>
+            <td><%= e.fit_ratio ? (e.fit_ratio*100).toFixed(0) + '%' : '—' %></td>
+            <td><%= e.day ? (e.day + ' ' + e.start_time + '–' + e.end_time) : '—' %></td>
+            <td><span class="badge badge-<%= e.status %>"><%= e.status.replace('_',' ') %></span></td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table></div>
+    <% } %>
+  </div></div>
+<% } %>

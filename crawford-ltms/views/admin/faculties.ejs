@@ -1,0 +1,71 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Academic structure</div><h1 class="h3 mb-0">Faculties</h1></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-landmark me-1 text-secondary"></i> All faculties</h2>
+      <% if (!faculties.length) { %>
+        <p class="text-secondary mb-0">No faculties yet — add one to start grouping departments under it.</p>
+      <% } else { %>
+
+        <% faculties.forEach(function(f){ %>
+          <form id="edit-fac-<%= f.id %>" method="POST" action="/admin/faculties/<%= f.id %>/edit"></form>
+          <form id="delete-fac-<%= f.id %>" method="POST" action="/admin/faculties/<%= f.id %>/delete"></form>
+        <% }) %>
+
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+          <thead><tr><th>Code</th><th>Name</th><th>Dean</th><th>Departments</th><th style="min-width:150px;"></th></tr></thead>
+          <tbody>
+          <% faculties.forEach(function(f){ %>
+            <tr>
+              <td><input form="edit-fac-<%= f.id %>" class="form-control form-control-sm font-monospace" style="width:90px;" name="code" value="<%= f.code %>" required></td>
+              <td><input form="edit-fac-<%= f.id %>" class="form-control form-control-sm" name="name" value="<%= f.name %>" required></td>
+              <td>
+                <select form="edit-fac-<%= f.id %>" class="form-select form-select-sm" name="dean_id">
+                  <option value="">— unassigned —</option>
+                  <% deans.forEach(function(d){ %>
+                    <option value="<%= d.id %>" <%= f.dean_id === d.id ? 'selected' : '' %>><%= d.name %></option>
+                  <% }) %>
+                </select>
+              </td>
+              <td><span class="badge bg-light text-dark border"><%= f.dept_count %></span></td>
+              <td class="d-flex gap-2">
+                <button form="edit-fac-<%= f.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
+                <button form="delete-fac-<%= f.id %>" class="btn btn-sm btn-danger" type="submit" <%= f.dept_count > 0 ? 'disabled title="Move or delete its departments first"' : '' %> data-confirm="Delete this faculty?"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+              </td>
+            </tr>
+          <% }) %>
+          </tbody>
+        </table></div>
+        <p class="form-text mt-2 mb-0">Reassigning the Dean here actually hands them the faculty's approval queue — not just a label change.</p>
+      <% } %>
+    </div></div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-plus me-1 text-secondary"></i> Add faculty</h2>
+      <form method="POST" action="/admin/faculties">
+        <div class="mb-3">
+          <label for="name" class="form-label">Faculty name</label>
+          <input class="form-control" id="name" name="name" required placeholder="Faculty of Science">
+        </div>
+        <div class="mb-3">
+          <label for="code" class="form-label">Code</label>
+          <input class="form-control" id="code" name="code" required placeholder="SCI">
+        </div>
+        <div class="mb-3">
+          <label for="dean_id" class="form-label">Dean</label>
+          <select class="form-select" id="dean_id" name="dean_id">
+            <option value="">— unassigned —</option>
+            <% deans.forEach(function(d){ %><option value="<%= d.id %>"><%= d.name %></option><% }) %>
+          </select>
+          <div class="form-text">Only accounts with the Dean role show up here.</div>
+        </div>
+        <button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Add faculty</button>
+      </form>
+    </div></div>
+  </div>
+</div>

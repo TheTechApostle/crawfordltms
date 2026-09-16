@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title + ' · Crawford LTMS' : 'Crawford University LTMS' %></title>
+  <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/css/custom.css">
+</head>
+<% if (user) { %>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Desktop sidebar -->
+      <aside class="col-lg-3 col-xl-2 d-none d-lg-flex flex-column p-0 sidebar position-sticky top-0" style="height:100vh;">
+        <div class="p-3 border-bottom border-secondary-subtle border-opacity-25">
+          <div class="brand-crest text-white"><i class="fa-solid fa-graduation-cap me-1"></i> Crawford University<small>Lecture Timetable Management</small></div>
+        </div>
+        <div class="flex-grow-1 overflow-auto py-2">
+          <%- include('partials/nav') %>
+        </div>
+        <div class="side-foot p-3">
+          <div class="text-white small fw-medium"><%= user.name %></div>
+          <span class="badge role-badge mb-2"><%= user.role %></span>
+          <form method="POST" action="/logout" class="mt-2">
+            <button class="btn btn-sm btn-outline-light w-100" type="submit"><i class="fa-solid fa-right-from-bracket me-1"></i> Sign out</button>
+          </form>
+        </div>
+      </aside>
+
+      <!-- Mobile offcanvas nav -->
+      <div class="offcanvas offcanvas-start offcanvas-dark d-lg-none" tabindex="-1" id="mobileNav">
+        <div class="offcanvas-header border-bottom border-secondary-subtle border-opacity-25">
+          <div class="brand-crest text-white"><i class="fa-solid fa-graduation-cap me-1"></i> Crawford University<small>Lecture Timetable Management</small></div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column p-0">
+          <div class="flex-grow-1 overflow-auto py-2">
+            <%- include('partials/nav') %>
+          </div>
+          <div class="side-foot p-3">
+            <div class="text-white small fw-medium"><%= user.name %></div>
+            <span class="badge role-badge mb-2"><%= user.role %></span>
+            <form method="POST" action="/logout" class="mt-2">
+              <button class="btn btn-sm btn-outline-light w-100" type="submit"><i class="fa-solid fa-right-from-bracket me-1"></i> Sign out</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main column -->
+      <main class="col-lg-9 col-xl-10 p-0">
+        <nav class="navbar navbar-dark d-lg-none" style="background: var(--brand-ink); border-bottom: 3px solid var(--brand-gold);">
+          <div class="container-fluid">
+            <span class="navbar-brand brand-crest text-white mb-0"><i class="fa-solid fa-graduation-cap me-1"></i> Crawford LTMS</span>
+            <button class="btn btn-outline-light btn-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileNav" aria-label="Open menu">
+              <i class="fa-solid fa-bars me-1"></i> Menu
+            </button>
+          </div>
+        </nav>
+        <div class="p-3 p-lg-4">
+          <% if (typeof flash !== 'undefined' && flash) { %>
+            <div class="alert alert-<%= flash.type === 'error' ? 'danger' : flash.type %>"><%= flash.message %></div>
+          <% } %>
+          <%- body %>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/confirm.js"></script>
+</body>
+<% } else { %>
+<body class="bg-light">
+  <div class="container py-5">
+    <%- body %>
+  </div>
+</body>
+<% } %>
+</html>

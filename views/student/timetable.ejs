@@ -1,0 +1,34 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Student</div><h1 class="h3 mb-0">My timetable</h1></div>
+  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+</div>
+
+<% const days = ['Monday','Tuesday','Wednesday','Thursday','Friday']; %>
+<% if (!entries.length) { %>
+  <div class="text-center py-5 text-secondary"><i class="fa-regular fa-calendar fa-2x mb-2 d-block text-secondary"></i>
+  <h3 class="h5 text-dark">No published classes yet</h3><p class="mb-0">Your personal timetable appears here once the registrar publishes it.</p></div>
+<% } else { %>
+  <div class="timetable-grid">
+    <div class="tt-head"></div>
+    <% days.forEach(function(d){ %><div class="tt-head"><%= d %></div><% }) %>
+    <div class="tt-time">Classes</div>
+    <% days.forEach(function(d){ %>
+      <div class="tt-cell">
+        <% entries.filter(e => e.day === d).sort((a,b) => a.start_time.localeCompare(b.start_time)).forEach(function(e){ %>
+          <button type="button" class="tt-entry tt-entry-btn" data-bs-toggle="modal" data-bs-target="#courseDetailModal"
+                  data-code="<%= e.code %>" data-title="<%= e.title %>" data-dept="<%= e.dept_name || '' %>"
+                  data-lecturer="<%= e.lecturer_name || 'TBA' %>" data-venue="<%= e.venue_name || '—' %>"
+                  data-capacity="<%= e.capacity || '' %>" data-registered="<%= e.registered_count != null ? e.registered_count : '' %>"
+                  data-status="<%= e.status %>" data-day="<%= e.day %>" data-start="<%= e.start_time %>" data-end="<%= e.end_time %>">
+            <div class="course"><%= e.code %></div>
+            <div class="meta"><i class="fa-regular fa-clock me-1"></i><%= e.start_time %>–<%= e.end_time %> <i class="fa-solid fa-location-dot ms-1 me-1"></i><%= e.venue_name %></div>
+            <div class="meta"><%= e.lecturer_name || 'TBA' %></div>
+          </button>
+        <% }) %>
+      </div>
+    <% }) %>
+  </div>
+  <p class="form-text mt-2">Click a class for full details. Scroll horizontally on smaller screens.</p>
+<% } %>
+
+<%- include('../partials/course-detail-modal') %>

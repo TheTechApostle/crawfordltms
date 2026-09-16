@@ -1,0 +1,83 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Head of Department<% if (dept && dept.faculty_name) { %> · <%= dept.faculty_name %><% } %></div><h1 class="h3 mb-0">Courses</h1></div>
+  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+</div>
+
+<% if (!dept) { %>
+  <div class="text-center py-5 text-secondary"><h3 class="h5 text-dark">No department assigned</h3><p>Ask the registrar to link your account to a department.</p></div>
+<% } else { %>
+
+<div class="card mb-3"><div class="card-body">
+  <h2 class="h6 card-title"><i class="fa-solid fa-plus me-1 text-secondary"></i> Propose a new course</h2>
+  <p class="text-secondary small">Goes to the Dean of <%= dept.faculty_name || 'your faculty' %> for approval before it can be offered.</p>
+  <form method="POST" action="/hod/courses">
+    <div class="row g-2">
+      <div class="col-md-3 mb-3"><label class="form-label">Code</label><input class="form-control" name="code" required placeholder="CSC420"></div>
+      <div class="col-md-5 mb-3"><label class="form-label">Title</label><input class="form-control" name="title" required placeholder="Machine Learning"></div>
+      <div class="col-md-2 mb-3"><label class="form-label">Level</label><input class="form-control" name="level" type="number" required placeholder="400"></div>
+      <div class="col-md-2 mb-3"><label class="form-label">Units</label><input class="form-control" name="credit_units" type="number" value="3"></div>
+    </div>
+    <button class="btn btn-gold" type="submit"><i class="fa-solid fa-paper-plane me-1"></i> Submit for approval</button>
+  </form>
+</div></div>
+
+<div class="card"><div class="card-body">
+  <h2 class="h6 card-title"><i class="fa-solid fa-book me-1 text-secondary"></i> Department courses</h2>
+  <% if (!courses.length) { %>
+    <p class="text-secondary mb-0">No courses in this department yet — propose one above.</p>
+  <% } else { %>
+
+    <%# Standalone forms, one per editable/deletable course, referenced from
+        table cells via the HTML form="" attribute — this avoids the invalid
+        (and unsupported) pattern of a <form> element wrapping <td>s. %>
+    <% courses.forEach(function(c){ %>
+      <% if (['pending','rejected'].includes(c.status)) { %>
+        <form id="edit-<%= c.id %>" method="POST" action="/hod/courses/<%= c.id %>/edit"></form>
+        <form id="delete-<%= c.id %>" method="POST" action="/hod/courses/<%= c.id %>/delete"></form>
+      <% } else if (session && !c.offered_this_session) { %>
+        <form id="offer-<%= c.id %>" method="POST" action="/hod/courses/<%= c.id %>/offer"></form>
+      <% } %>
+    <% }) %>
+
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead><tr><th style="min-width:110px;">Code</th><th style="min-width:200px;">Title</th><th>Level</th><th>Units</th><th>Status</th><th style="min-width:230px;"></th></tr></thead>
+      <tbody>
+      <% courses.forEach(function(c){ %>
+        <% const editable = ['pending','rejected'].includes(c.status); %>
+        <tr>
+          <% if (editable) { %>
+            <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="code" value="<%= c.code %>" required></td>
+            <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="title" value="<%= c.title %>" required></td>
+            <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="level" type="number" value="<%= c.level %>" style="width:80px;" required></td>
+            <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="credit_units" type="number" value="<%= c.credit_units %>" style="width:70px;"></td>
+            <td>
+              <span class="badge badge-<%= c.status === 'rejected' ? 'rejected' : 'draft' %>"><%= c.status %></span>
+              <% if (c.status === 'rejected' && c.reject_reason) { %>
+                <div class="form-text mb-0"><%= c.reject_reason %></div>
+              <% } %>
+            </td>
+            <td class="d-flex gap-2">
+              <button form="edit-<%= c.id %>" class="btn btn-sm btn-gold" type="submit"><i class="fa-solid fa-check me-1"></i> Save<%= c.status === 'rejected' ? ' & resubmit' : '' %></button>
+              <button form="delete-<%= c.id %>" class="btn btn-sm btn-danger" type="submit" data-confirm="Delete this course proposal?"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+            </td>
+          <% } else { %>
+            <td class="font-monospace"><%= c.code %></td>
+            <td><%= c.title %></td>
+            <td><%= c.level %></td>
+            <td><%= c.credit_units %></td>
+            <td><span class="badge badge-published">approved</span></td>
+            <td class="d-flex gap-2">
+              <% if (session && !c.offered_this_session) { %>
+                <button form="offer-<%= c.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-share me-1"></i> Offer this session</button>
+              <% } else if (c.offered_this_session) { %>
+                <a class="btn btn-sm btn-outline-secondary" href="/hod/assign"><i class="fa-solid fa-chalkboard-user me-1"></i> Assign lecturer</a>
+              <% } %>
+            </td>
+          <% } %>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div></div>
+<% } %>

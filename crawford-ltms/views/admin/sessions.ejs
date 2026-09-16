@@ -1,0 +1,53 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Academic structure</div><h1 class="h3 mb-0">Sessions</h1></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-calendar-days me-1 text-secondary"></i> All sessions</h2>
+
+      <% sessions.forEach(function(s){ %>
+        <form id="edit-session-<%= s.id %>" method="POST" action="/admin/sessions/<%= s.id %>/edit"></form>
+        <form id="delete-session-<%= s.id %>" method="POST" action="/admin/sessions/<%= s.id %>/delete"></form>
+      <% }) %>
+
+      <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Name</th><th>Status</th><th>Registration</th><th style="min-width:280px;"></th></tr></thead>
+        <tbody>
+        <% sessions.forEach(function(s){ %>
+          <tr>
+            <td><input form="edit-session-<%= s.id %>" class="form-control form-control-sm" name="name" value="<%= s.name %>" required></td>
+            <td><%- s.is_active ? '<span class="badge badge-published">active</span>' : '<span class="badge badge-draft">inactive</span>' %></td>
+            <td><%- s.reg_locked ? '<span class="badge badge-shortfall">locked</span>' : '<span class="badge badge-final">open</span>' %></td>
+            <td class="d-flex gap-2 flex-wrap">
+              <button form="edit-session-<%= s.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
+              <form method="POST" action="/admin/sessions/<%= s.id %>/activate">
+                <button class="btn btn-sm btn-outline-secondary" <%= s.is_active ? 'disabled' : '' %>><i class="fa-solid fa-play me-1"></i> Activate</button>
+              </form>
+              <form method="POST" action="/admin/sessions/<%= s.id %>/lock">
+                <button class="btn btn-sm btn-outline-secondary"><i class="fa-solid <%= s.reg_locked ? 'fa-lock-open' : 'fa-lock' %> me-1"></i> <%= s.reg_locked ? 'Unlock' : 'Lock' %></button>
+              </form>
+              <button form="delete-session-<%= s.id %>" class="btn btn-sm btn-danger" type="submit" data-confirm="Delete this session? Only possible if nothing has been offered under it."><i class="fa-solid fa-trash me-1"></i> Delete</button>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table></div>
+    </div></div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-plus me-1 text-secondary"></i> New session</h2>
+      <form method="POST" action="/admin/sessions">
+        <div class="mb-3">
+          <label for="name" class="form-label">Session name</label>
+          <input class="form-control" id="name" name="name" required placeholder="2025/2026 - First Semester">
+        </div>
+        <button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Create session</button>
+      </form>
+      <p class="form-text mt-3 mb-0">Locking registration mirrors Fig. 4 in the design doc: allocation should only run once registration numbers stabilize. Deleting a session only works if nothing has ever been offered under it.</p>
+    </div></div>
+  </div>
+</div>

@@ -1,0 +1,39 @@
+<% function isActive(p) { return path === p ? 'active' : ''; } %>
+<ul class="nav nav-pills flex-column">
+  <% if (user.role === 'admin') { %>
+    <li class="nav-item"><a href="/admin" class="nav-link <%= isActive('/admin') %>"><i class="fa-solid fa-gauge fa-fw me-2"></i>Dashboard</a></li>
+    <li class="nav-section-label">Academic structure</li>
+    <li class="nav-item"><a href="/admin/sessions" class="nav-link <%= isActive('/admin/sessions') %>"><i class="fa-solid fa-calendar-days fa-fw me-2"></i>Sessions</a></li>
+    <li class="nav-item"><a href="/admin/faculties" class="nav-link <%= isActive('/admin/faculties') %>"><i class="fa-solid fa-landmark fa-fw me-2"></i>Faculties</a></li>
+    <li class="nav-item"><a href="/admin/departments" class="nav-link <%= isActive('/admin/departments') %>"><i class="fa-solid fa-building-columns fa-fw me-2"></i>Departments</a></li>
+    <li class="nav-item"><a href="/admin/courses" class="nav-link <%= isActive('/admin/courses') %>"><i class="fa-solid fa-book fa-fw me-2"></i>Courses</a></li>
+    <li class="nav-item"><a href="/admin/venues" class="nav-link <%= isActive('/admin/venues') %>"><i class="fa-solid fa-door-open fa-fw me-2"></i>Venues</a></li>
+    <li class="nav-item"><a href="/admin/timeslots" class="nav-link <%= isActive('/admin/timeslots') %>"><i class="fa-regular fa-clock fa-fw me-2"></i>Timeslots</a></li>
+    <li class="nav-section-label">Timetable</li>
+    <li class="nav-item"><a href="/admin/allocation" class="nav-link <%= isActive('/admin/allocation') %>"><i class="fa-solid fa-gears fa-fw me-2"></i>Allocation engine</a></li>
+    <li class="nav-item"><a href="/admin/timetable" class="nav-link <%= isActive('/admin/timetable') %>"><i class="fa-solid fa-table-cells fa-fw me-2"></i>Master timetable</a></li>
+    <li class="nav-item"><a href="/admin/publish" class="nav-link <%= isActive('/admin/publish') %>"><i class="fa-solid fa-paper-plane fa-fw me-2"></i>Publish queue</a></li>
+  <% } else if (user.role === 'hod') { %>
+    <li class="nav-item"><a href="/hod" class="nav-link <%= isActive('/hod') %>"><i class="fa-solid fa-gauge fa-fw me-2"></i>Dashboard</a></li>
+    <li class="nav-item"><a href="/hod/courses" class="nav-link <%= isActive('/hod/courses') %>"><i class="fa-solid fa-book fa-fw me-2"></i>Courses</a></li>
+    <li class="nav-item"><a href="/hod/assign" class="nav-link <%= isActive('/hod/assign') %>"><i class="fa-solid fa-chalkboard-user fa-fw me-2"></i>Assign lecturers</a></li>
+    <li class="nav-item"><a href="/hod/approvals" class="nav-link <%= isActive('/hod/approvals') %>"><i class="fa-solid fa-clipboard-check fa-fw me-2"></i>Approval queue</a></li>
+    <li class="nav-item"><a href="/hod/timetable" class="nav-link <%= isActive('/hod/timetable') %>"><i class="fa-regular fa-calendar fa-fw me-2"></i>Department timetable</a></li>
+  <% } else if (user.role === 'dean') { %>
+    <li class="nav-item"><a href="/dean" class="nav-link <%= isActive('/dean') %>"><i class="fa-solid fa-gauge fa-fw me-2"></i>Dashboard</a></li>
+    <li class="nav-item"><a href="/dean/departments" class="nav-link <%= isActive('/dean/departments') %>"><i class="fa-solid fa-building-columns fa-fw me-2"></i>Departments</a></li>
+    <li class="nav-item"><a href="/dean/timetable" class="nav-link <%= isActive('/dean/timetable') %>"><i class="fa-solid fa-table-cells fa-fw me-2"></i>Faculty timetable</a></li>
+    <li class="nav-item"><a href="/dean/courses" class="nav-link <%= isActive('/dean/courses') %>"><i class="fa-solid fa-book fa-fw me-2"></i>Course approvals</a></li>
+    <li class="nav-item"><a href="/dean/approvals" class="nav-link <%= isActive('/dean/approvals') %>"><i class="fa-solid fa-clipboard-check fa-fw me-2"></i>Approval queue</a></li>
+    <li class="nav-item"><a href="/dean/clashes" class="nav-link <%= isActive('/dean/clashes') %>"><i class="fa-solid fa-triangle-exclamation fa-fw me-2"></i>Cross-dept. clashes</a></li>
+  <% } else if (user.role === 'lecturer') { %>
+    <li class="nav-item"><a href="/lecturer" class="nav-link <%= isActive('/lecturer') %>"><i class="fa-solid fa-gauge fa-fw me-2"></i>Dashboard</a></li>
+    <li class="nav-item"><a href="/lecturer/courses" class="nav-link <%= path.startsWith('/lecturer/courses') ? 'active' : '' %>"><i class="fa-solid fa-book-open fa-fw me-2"></i>My courses</a></li>
+    <li class="nav-item"><a href="/lecturer/slots" class="nav-link <%= isActive('/lecturer/slots') %>"><i class="fa-regular fa-square-check fa-fw me-2"></i>My draft slots</a></li>
+    <li class="nav-item"><a href="/lecturer/timetable" class="nav-link <%= isActive('/lecturer/timetable') %>"><i class="fa-regular fa-calendar fa-fw me-2"></i>My timetable</a></li>
+  <% } else if (user.role === 'student') { %>
+    <li class="nav-item"><a href="/student" class="nav-link <%= isActive('/student') %>"><i class="fa-solid fa-gauge fa-fw me-2"></i>Dashboard</a></li>
+    <li class="nav-item"><a href="/student/register" class="nav-link <%= isActive('/student/register') %>"><i class="fa-solid fa-pen-to-square fa-fw me-2"></i>Course registration</a></li>
+    <li class="nav-item"><a href="/student/timetable" class="nav-link <%= isActive('/student/timetable') %>"><i class="fa-regular fa-calendar fa-fw me-2"></i>My timetable</a></li>
+  <% } %>
+</ul>
