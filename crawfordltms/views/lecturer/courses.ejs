@@ -1,0 +1,37 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Lecturer</div><h1 class="h3 mb-0">My courses</h1></div>
+  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+</div>
+
+<div class="card"><div class="card-body">
+  <p class="text-secondary">Set your own timetable slot for a course, or check who's registered. Venue choices are always limited to what actually fits the class — the system never offers a hall bigger than it needs to be.</p>
+  <% if (!offerings.length) { %>
+    <p class="text-secondary mb-0">No courses assigned to you this session.</p>
+  <% } else { %>
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead><tr><th>Course</th><th>Registered</th><th>Slot</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      <% offerings.forEach(function(o){ %>
+        <tr>
+          <td><%= o.code %> — <%= o.title %></td>
+          <td><%= o.registered_count %></td>
+          <td><%= o.venue_name ? (o.slot_label + ' · ' + o.venue_name) : '—' %></td>
+          <td>
+            <% if (o.entry_status) { %>
+              <span class="badge badge-<%= o.entry_status %>"><%= o.entry_status.replace('_',' ') %></span>
+            <% } else { %>
+              <span class="badge bg-light text-dark border">not scheduled</span>
+            <% } %>
+          </td>
+          <td class="d-flex gap-2">
+            <a class="btn btn-sm btn-outline-secondary" href="/lecturer/courses/<%= o.id %>/roster"><i class="fa-solid fa-users me-1"></i> Roster</a>
+            <% if (!o.entry_status || ['draft','shortfall','rejected'].includes(o.entry_status)) { %>
+              <a class="btn btn-sm btn-gold" href="/lecturer/courses/<%= o.id %>/schedule"><i class="fa-regular fa-calendar-plus me-1"></i> Set timetable</a>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div></div>

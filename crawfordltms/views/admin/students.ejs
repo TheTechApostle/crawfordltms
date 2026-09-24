@@ -1,0 +1,74 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Academic structure</div><h1 class="h3 mb-0">Students</h1></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-user-graduate me-1 text-secondary"></i> All students (<%= students.length %>)</h2>
+      <p class="text-secondary small">Students can also create their own account at <code>/register/student</code> — self-signup and this bulk import are both available side by side.</p>
+
+      <% students.forEach(function(s){ %>
+        <form id="delete-student-<%= s.id %>" method="POST" action="/admin/students/<%= s.id %>/delete"></form>
+      <% }) %>
+
+      <% if (!students.length) { %>
+        <p class="text-secondary mb-0">No students yet.</p>
+      <% } else { %>
+        <div class="table-responsive" style="max-height:520px; overflow-y:auto;"><table class="table table-hover align-middle mb-0">
+          <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Level</th><th></th></tr></thead>
+          <tbody>
+          <% students.forEach(function(s){ %>
+            <tr>
+              <td><%= s.name %></td>
+              <td class="text-secondary small"><%= s.email %></td>
+              <td><%= s.dept_name || '—' %></td>
+              <td><%= s.level || '—' %></td>
+              <td><button form="delete-student-<%= s.id %>" class="btn btn-sm btn-outline-danger" type="submit" data-confirm="Remove this student account?"><i class="fa-solid fa-trash"></i></button></td>
+            </tr>
+          <% }) %>
+          </tbody>
+        </table></div>
+      <% } %>
+    </div></div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-file-import me-1 text-secondary"></i> Bulk import</h2>
+      <p class="text-secondary small">Paste one student per line: <code>name,email,department_code,level</code></p>
+      <form method="POST" action="/admin/students/import">
+        <div class="mb-3">
+          <textarea class="form-control font-monospace" name="csv" rows="8" placeholder="Blessing Okonkwo,blessing.o@crawford.edu.ng,CSC,300
+David Eze,david.e@crawford.edu.ng,CSC,300" required></textarea>
+        </div>
+        <div class="mb-3">
+          <label for="default_password" class="form-label">Default password</label>
+          <input class="form-control" id="default_password" name="default_password" placeholder="password123 (min. 8 characters)">
+          <div class="form-text">Applied to every imported account — share it with students so they can sign in and change it.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Department codes</label>
+          <div class="d-flex flex-wrap gap-1">
+            <% departments.forEach(function(d){ %><span class="badge bg-light text-dark border font-monospace"><%= d.code %></span><% }) %>
+          </div>
+        </div>
+        <button class="btn btn-gold" type="submit"><i class="fa-solid fa-file-import me-1"></i> Import students</button>
+      </form>
+
+      <% if (result) { %>
+        <hr>
+        <p class="mb-1"><span class="badge badge-published"><%= result.created.length %> created</span>
+          <% if (result.errors.length) { %><span class="badge badge-rejected"><%= result.errors.length %> skipped</span><% } %></p>
+        <% if (result.created.length) { %>
+          <p class="form-text mb-1">Password for all newly created accounts: <code><%= result.defaultPassword %></code></p>
+        <% } %>
+        <% if (result.errors.length) { %>
+          <ul class="small text-secondary mb-0">
+            <% result.errors.forEach(function(e){ %><li><%= e %></li><% }) %>
+          </ul>
+        <% } %>
+      <% } %>
+    </div></div>
+  </div>
+</div>

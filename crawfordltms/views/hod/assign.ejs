@@ -1,0 +1,33 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Head of Department</div><h1 class="h3 mb-0">Assign lecturers</h1></div>
+  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+</div>
+
+<div class="card"><div class="card-body">
+  <% if (!offerings.length) { %>
+    <p class="text-secondary mb-0">No course offerings yet this session. Ask the registrar to offer department courses.</p>
+  <% } else { %>
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead><tr><th>Course</th><th>Registered</th><th>Assign lecturer</th></tr></thead>
+      <tbody>
+      <% offerings.forEach(function(o){ %>
+        <tr>
+          <td><%= o.code %> — <%= o.title %></td>
+          <td><%= o.registered_count %></td>
+          <td>
+            <form method="POST" action="/hod/assign/<%= o.id %>" class="d-flex gap-2">
+              <select name="lecturer_id" class="form-select form-select-sm" style="max-width:220px;">
+                <option value="">— unassigned —</option>
+                <% lecturers.forEach(function(l){ %>
+                  <option value="<%= l.id %>" <%= o.lecturer_id === l.id ? 'selected' : '' %>><%= l.name %></option>
+                <% }) %>
+              </select>
+              <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div></div>
