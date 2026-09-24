@@ -1,0 +1,46 @@
+<div class="modal fade" id="courseDetailModal" tabindex="-1" aria-labelledby="courseDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="courseDetailModalLabel">Course details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5 text-secondary fw-normal">College</dt><dd class="col-7" id="cdCollege">—</dd>
+          <dt class="col-5 text-secondary fw-normal">Department</dt><dd class="col-7" id="cdDept">—</dd>
+          <dt class="col-5 text-secondary fw-normal">Lecturer</dt><dd class="col-7" id="cdLecturer">—</dd>
+          <dt class="col-5 text-secondary fw-normal">Venue</dt><dd class="col-7" id="cdVenue">—</dd>
+          <dt class="col-5 text-secondary fw-normal">Capacity</dt><dd class="col-7" id="cdCapacity">—</dd>
+          <dt class="col-5 text-secondary fw-normal">Registered</dt><dd class="col-7" id="cdRegistered">—</dd>
+          <dt class="col-5 text-secondary fw-normal">Time</dt><dd class="col-7" id="cdTime">—</dd>
+          <dt class="col-5 text-secondary fw-normal">Status</dt><dd class="col-7" id="cdStatus">—</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var modalEl = document.getElementById('courseDetailModal');
+  if (!modalEl || modalEl.dataset.wired) return;
+  modalEl.dataset.wired = '1';
+  modalEl.addEventListener('show.bs.modal', function (event) {
+    var btn = event.relatedTarget;
+    if (!btn || !btn.dataset) return;
+    var d = btn.dataset;
+    document.getElementById('courseDetailModalLabel').textContent = d.code + (d.title ? ' — ' + d.title : '');
+    document.getElementById('cdCollege').textContent = d.college || '—';
+    document.getElementById('cdDept').textContent = d.dept || '—';
+    document.getElementById('cdLecturer').textContent = d.lecturer || 'Unassigned';
+    document.getElementById('cdVenue').textContent = d.venue || '—';
+    document.getElementById('cdCapacity').textContent = d.capacity || '—';
+    document.getElementById('cdRegistered').textContent = (d.registered !== '' ? d.registered : '—') + (d.provisional ? ' (provisional — estimate)' : '');
+    document.getElementById('cdTime').textContent = [d.day, [d.start, d.end].filter(Boolean).join('–')].filter(Boolean).join(' · ');
+    var statusEl = document.getElementById('cdStatus');
+    var label = (d.status || '').replace('_', ' ');
+    statusEl.innerHTML = d.status ? '<span class="badge badge-' + d.status + '">' + label + '</span>' : '—';
+  });
+})();
+</script>

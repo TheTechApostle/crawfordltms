@@ -1,0 +1,94 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Dean / Timetable Committee<% if (college) { %> · <%= college.name %><% } %></div><h1 class="h3 mb-0">Course approvals</h1></div>
+</div>
+
+<div class="card"><div class="card-body">
+  <% if (!college) { %>
+    <div class="text-center py-5 text-secondary">
+      <i class="fa-solid fa-landmark fa-2x mb-2 d-block text-secondary"></i>
+      <h3 class="h5 text-dark">No college assigned</h3>
+      <p class="mb-0">Ask the registrar to set you as Dean of a college.</p>
+    </div>
+  <% } else if (!courses.length) { %>
+    <p class="text-secondary mb-0">No courses proposed by any department in <%= college.name %> yet.</p>
+  <% } else { %>
+    <% const pendingByDept = {}; const pendingByProgramme = {};
+       courses.forEach(function(c){
+         if (c.status !== 'pending') return;
+         pendingByDept[c.department_id] = (pendingByDept[c.department_id] || 0) + 1;
+         if (c.programme_id) pendingByProgramme[c.programme_id] = (pendingByProgramme[c.programme_id] || 0) + 1;
+       });
+       const deptsWithPending = departments.filter(d => pendingByDept[d.id] > 0);
+       const programmesWithPending = programmes.filter(p => pendingByProgramme[p.id] > 0);
+    %>
+
+    <% if (deptsWithPending.length || programmesWithPending.length) { %>
+      <% deptsWithPending.forEach(function(d){ %>
+        <form id="bulk-dept-<%= d.id %>" method="POST" action="/dean/courses/bulk-approve/department/<%= d.id %>"></form>
+      <% }) %>
+      <% programmesWithPending.forEach(function(p){ %>
+        <form id="bulk-prog-<%= p.id %>" method="POST" action="/dean/courses/bulk-approve/programme/<%= p.id %>"></form>
+      <% }) %>
+      <div class="alert alert-light border mb-3">
+        <p class="fw-medium mb-2"><i class="fa-solid fa-layer-group me-1"></i> Approve in bulk — a whole department or a single programme at once, instead of course by course.</p>
+        <div class="d-flex flex-wrap gap-2">
+          <% deptsWithPending.forEach(function(d){ %>
+            <button form="bulk-dept-<%= d.id %>" class="btn btn-sm btn-gold" type="submit" data-confirm="Approve all <%= pendingByDept[d.id] %> pending course(s) in <%= d.name %>?">
+              <i class="fa-solid fa-check-double me-1"></i> Approve all — <%= d.name %> (<%= pendingByDept[d.id] %>)
+            </button>
+          <% }) %>
+          <% programmesWithPending.forEach(function(p){ %>
+            <button form="bulk-prog-<%= p.id %>" class="btn btn-sm btn-outline-secondary" type="submit" data-confirm="Approve all <%= pendingByProgramme[p.id] %> pending course(s) in <%= p.name %>?">
+              <i class="fa-solid fa-check-double me-1"></i> Approve all — <%= p.name %> (<%= pendingByProgramme[p.id] %>)
+            </button>
+          <% }) %>
+        </div>
+      </div>
+    <% } %>
+
+    <p class="text-secondary small">Pending proposals can also be edited directly here if something needs a small fix before approving — no need to bounce it back to the HOD.</p>
+
+    <% courses.filter(c => c.status === 'pending').forEach(function(c){ %>
+      <form id="edit-<%= c.id %>" method="POST" action="/dean/courses/<%= c.id %>/edit"></form>
+      <form id="approve-<%= c.id %>" method="POST" action="/dean/courses/<%= c.id %>/approve"></form>
+      <form id="reject-<%= c.id %>" method="POST" action="/dean/courses/<%= c.id %>/reject">
+        <input type="hidden" name="reason" value="Not approved by college">
+      </form>
+    <% }) %>
+
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead><tr><th style="min-width:100px;">Code</th><th style="min-width:180px;">Title</th><th>Dept</th><th>Programme</th><th>Level</th><th>Proposed by</th><th>Status</th><th style="min-width:220px;"></th></tr></thead>
+      <tbody>
+      <% courses.forEach(function(c){ %>
+        <% const pending = c.status === 'pending'; %>
+        <tr>
+          <% if (pending) { %>
+            <td><input form="edit-<%= c.id %>" class="form-control form-control-sm font-monospace" name="code" value="<%= c.code %>" required></td>
+            <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="title" value="<%= c.title %>" required></td>
+            <td><%= c.dept_name %></td>
+            <td class="text-secondary small"><%= c.programme_name || '—' %></td>
+            <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="level" type="number" style="width:75px;" value="<%= c.level %>" required>
+                <input form="edit-<%= c.id %>" type="hidden" name="credit_units" value="<%= c.credit_units %>"></td>
+            <td><%= c.proposed_by || '—' %></td>
+            <td><span class="badge badge-draft">pending</span></td>
+            <td class="d-flex gap-2 flex-wrap">
+              <button form="edit-<%= c.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-floppy-disk me-1"></i> Save</button>
+              <button form="approve-<%= c.id %>" class="btn btn-sm btn-gold" type="submit"><i class="fa-solid fa-check me-1"></i> Approve</button>
+              <button form="reject-<%= c.id %>" class="btn btn-sm btn-danger" type="submit"><i class="fa-solid fa-xmark me-1"></i> Reject</button>
+            </td>
+          <% } else { %>
+            <td class="font-monospace"><%= c.code %></td>
+            <td><%= c.title %><% if (c.status === 'rejected' && c.reject_reason) { %><div class="form-text mb-0"><%= c.reject_reason %></div><% } %></td>
+            <td><%= c.dept_name %></td>
+            <td class="text-secondary small"><%= c.programme_name || '—' %></td>
+            <td><%= c.level %></td>
+            <td><%= c.proposed_by || '—' %></td>
+            <td><span class="badge badge-<%= c.status === 'approved' ? 'published' : 'rejected' %>"><%= c.status %></span></td>
+            <td></td>
+          <% } %>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div></div>

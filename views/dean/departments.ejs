@@ -1,0 +1,85 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Dean / Timetable Committee<% if (college) { %> · <%= college.name %><% } %></div><h1 class="h3 mb-0">Departments</h1></div>
+  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+</div>
+
+<% if (!college) { %>
+  <div class="text-center py-5 text-secondary">
+    <i class="fa-solid fa-landmark fa-2x mb-2 d-block text-secondary"></i>
+    <h3 class="h5 text-dark">No college assigned</h3>
+    <p class="mb-0">Ask the registrar to set you as Dean of a college.</p>
+  </div>
+<% } else { %>
+
+<div class="card mb-3"><div class="card-body">
+  <h2 class="h6 card-title"><i class="fa-solid fa-building-columns me-1 text-secondary"></i> Departments in <%= college.name %></h2>
+  <% if (!departments.length) { %>
+    <p class="text-secondary mb-0">No departments have been added to this college yet.</p>
+  <% } else { %>
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead><tr>
+        <th>Department</th><th>Head of Department</th><th>Courses</th><th>Lecturers</th><th>Students</th><th>Offered this session</th>
+      </tr></thead>
+      <tbody>
+      <% departments.forEach(function(d){ %>
+        <tr>
+          <td><%= d.name %> <span class="text-secondary font-monospace small">(<%= d.code %>)</span></td>
+          <td>
+            <% if (d.hod_name) { %>
+              <%= d.hod_name %><div class="form-text mb-0"><%= d.hod_email %></div>
+            <% } else { %>
+              <span class="text-secondary">— unassigned —</span>
+            <% } %>
+          </td>
+          <td>
+            <span class="badge badge-published"><%= d.approved_courses %> approved</span>
+            <% if (d.pending_courses > 0) { %>
+              <span class="badge badge-draft"><%= d.pending_courses %> pending</span>
+            <% } %>
+          </td>
+          <td><%= d.lecturer_count %></td>
+          <td><%= d.student_count %></td>
+          <td><%= d.offerings_this_session %></td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div></div>
+
+<div class="card"><div class="card-body">
+  <h2 class="h6 card-title"><i class="fa-solid fa-chalkboard-user me-1 text-secondary"></i> Lecturers in charge — <%= session ? session.name : 'no active session' %></h2>
+  <% if (!session) { %>
+    <p class="text-secondary mb-0">No active session — nothing is offered yet.</p>
+  <% } else if (!lecturersInCharge.length) { %>
+    <p class="text-secondary mb-0">No courses offered yet this session across <%= college.name %>.</p>
+  <% } else { %>
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead><tr><th>Course</th><th>Department</th><th>Lecturer in charge</th><th>Registered</th><th>Timetable status</th></tr></thead>
+      <tbody>
+      <% lecturersInCharge.forEach(function(o){ %>
+        <tr>
+          <td><%= o.code %> — <%= o.title %></td>
+          <td><%= o.dept_name %></td>
+          <td>
+            <% if (o.lecturer_name) { %>
+              <%= o.lecturer_name %><div class="form-text mb-0"><%= o.lecturer_email %></div>
+            <% } else { %>
+              <span class="text-secondary">— unassigned —</span>
+            <% } %>
+          </td>
+          <td><%= o.registered_count %></td>
+          <td>
+            <% if (o.entry_status) { %>
+              <span class="badge badge-<%= o.entry_status %>"><%= o.entry_status.replace('_',' ') %></span>
+            <% } else { %>
+              <span class="badge bg-light text-dark border">not scheduled</span>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div></div>
+<% } %>

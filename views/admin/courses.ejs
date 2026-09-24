@@ -1,0 +1,131 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Academic structure</div><h1 class="h3 mb-0">Courses</h1></div>
+  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-book me-1 text-secondary"></i> Course catalogue</h2>
+      <p class="text-secondary small">Courses proposed by an HOD normally go through Dean approval — but as registrar you can edit, approve or reject any course directly. Courses you add here go straight to approved.</p>
+
+      <% courses.forEach(function(c){ %>
+        <form id="edit-course-<%= c.id %>" method="POST" action="/admin/courses/<%= c.id %>/edit"></form>
+        <form id="delete-course-<%= c.id %>" method="POST" action="/admin/courses/<%= c.id %>/delete"></form>
+        <% if (c.status !== 'approved') { %>
+          <form id="approve-course-<%= c.id %>" method="POST" action="/admin/courses/<%= c.id %>/approve"></form>
+        <% } %>
+        <% if (c.status !== 'rejected') { %>
+          <form id="reject-course-<%= c.id %>" method="POST" action="/admin/courses/<%= c.id %>/reject">
+            <input type="hidden" name="reason" value="Not approved by the registrar">
+          </form>
+        <% } %>
+        <% if (session && c.status === 'approved') { %>
+          <form id="offer-course-<%= c.id %>" method="POST" action="/admin/courses/<%= c.id %>/offer"></form>
+        <% } %>
+      <% }) %>
+
+      <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <thead><tr><th style="min-width:100px;">Code</th><th style="min-width:180px;">Title</th><th>Dept</th><th>Programme</th><th>Level</th><th>Units</th><th>Est. size</th><th>Status</th><th style="min-width:260px;"></th></tr></thead>
+        <tbody>
+        <% courses.forEach(function(c){ %>
+          <tr>
+            <td><input form="edit-course-<%= c.id %>" class="form-control form-control-sm font-monospace" name="code" value="<%= c.code %>" required></td>
+            <td><input form="edit-course-<%= c.id %>" class="form-control form-control-sm" name="title" value="<%= c.title %>" required></td>
+            <td>
+              <select form="edit-course-<%= c.id %>" class="form-select form-select-sm" name="department_id" required>
+                <% departments.forEach(function(d){ %>
+                  <option value="<%= d.id %>" <%= c.department_id === d.id ? 'selected' : '' %>><%= d.name %></option>
+                <% }) %>
+              </select>
+            </td>
+            <td>
+              <select form="edit-course-<%= c.id %>" class="form-select form-select-sm" name="programme_id">
+                <option value="">— none —</option>
+                <% programmes.forEach(function(p){ %>
+                  <option value="<%= p.id %>" <%= c.programme_id === p.id ? 'selected' : '' %>><%= p.name %></option>
+                <% }) %>
+              </select>
+            </td>
+            <td><input form="edit-course-<%= c.id %>" class="form-control form-control-sm" name="level" type="number" style="width:75px;" value="<%= c.level %>" required></td>
+            <td><input form="edit-course-<%= c.id %>" class="form-control form-control-sm" name="credit_units" type="number" style="width:65px;" value="<%= c.credit_units %>"></td>
+            <td><input form="edit-course-<%= c.id %>" class="form-control form-control-sm" name="expected_class_size" type="number" style="width:80px;" value="<%= c.expected_class_size || '' %>" placeholder="—"></td>
+            <td><span class="badge badge-<%= c.status === 'approved' ? 'published' : (c.status === 'rejected' ? 'rejected' : 'draft') %>"><%= c.status %></span></td>
+            <td class="d-flex gap-2 flex-wrap">
+              <button form="edit-course-<%= c.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
+              <% if (c.status !== 'approved') { %>
+                <button form="approve-course-<%= c.id %>" class="btn btn-sm btn-gold" type="submit"><i class="fa-solid fa-thumbs-up me-1"></i> Approve</button>
+              <% } %>
+              <% if (c.status !== 'rejected') { %>
+                <button form="reject-course-<%= c.id %>" class="btn btn-sm btn-outline-danger" type="submit"><i class="fa-solid fa-thumbs-down me-1"></i> Reject</button>
+              <% } %>
+              <% if (session && c.status === 'approved') { %>
+                <button form="offer-course-<%= c.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-share me-1"></i> Offer this session</button>
+              <% } %>
+              <button form="delete-course-<%= c.id %>" class="btn btn-sm btn-danger" type="submit" <%= c.offering_count > 0 ? 'disabled title="Already offered in a session"' : '' %> data-confirm="Delete this course?"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table></div>
+    </div></div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-plus me-1 text-secondary"></i> Add course</h2>
+      <form method="POST" action="/admin/courses">
+        <div class="row g-2">
+          <div class="col-6 mb-3"><label for="code" class="form-label">Course code</label><input class="form-control" id="code" name="code" required placeholder="CSC313"></div>
+          <div class="col-6 mb-3"><label for="level" class="form-label">Level</label><input class="form-control" id="level" name="level" type="number" required placeholder="300"></div>
+        </div>
+        <div class="mb-3">
+          <label for="title" class="form-label">Title</label>
+          <input class="form-control" id="title" name="title" required placeholder="Operations Research">
+        </div>
+        <div class="row g-2">
+          <div class="col-6 mb-3"><label for="credit_units" class="form-label">Credit units</label><input class="form-control" id="credit_units" name="credit_units" type="number" value="3"></div>
+          <div class="col-6 mb-3">
+            <label for="department_id" class="form-label">Department</label>
+            <select class="form-select" id="department_id" name="department_id" required>
+              <% departments.forEach(function(d){ %><option value="<%= d.id %>"><%= d.name %></option><% }) %>
+            </select>
+          </div>
+        </div>
+        <div class="row g-2">
+          <div class="col-6 mb-3">
+            <label for="programme_id" class="form-label">Programme</label>
+            <select class="form-select" id="programme_id" name="programme_id">
+              <option value="">— none —</option>
+              <% programmes.forEach(function(p){ %><option value="<%= p.id %>"><%= p.name %></option><% }) %>
+            </select>
+          </div>
+          <div class="col-6 mb-3">
+            <label for="expected_class_size" class="form-label">Est. class size</label>
+            <input class="form-control" id="expected_class_size" name="expected_class_size" type="number" placeholder="optional">
+            <div class="form-text">Lets the allocation engine draft a provisional venue/slot before students register.</div>
+          </div>
+        </div>
+        <button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Add course</button>
+      </form>
+    </div></div>
+  </div>
+</div>
+
+<% if (session) { %>
+<div class="card mt-3"><div class="card-body">
+  <h2 class="h6 card-title"><i class="fa-solid fa-list-check me-1 text-secondary"></i> Offerings this session</h2>
+  <% if (!offerings.length) { %>
+    <p class="text-secondary mb-0">No courses offered yet — click "Offer this session" above.</p>
+  <% } else { %>
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead><tr><th>Course</th><th>Lecturer</th><th>Registered</th></tr></thead>
+      <tbody>
+      <% offerings.forEach(function(o){ %>
+        <tr><td><%= o.code %> — <%= o.title %></td><td><%= o.lecturer_name || 'Unassigned (set via HOD)' %></td><td><%= o.registered_count %></td></tr>
+      <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div></div>
+<% } %>

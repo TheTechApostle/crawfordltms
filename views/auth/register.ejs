@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create an account · Crawford LTMS</title>
+  <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/css/custom.css">
+</head>
+<body class="login-wrap d-flex align-items-center justify-content-center p-3">
+  <div class="card login-card shadow-lg w-100" style="max-width:460px;">
+    <div class="card-body p-4">
+      <div class="brand-crest text-center"><i class="fa-solid fa-graduation-cap"></i> Crawford University<small>Lecture Timetable Management System</small></div>
+      <h1 class="h6 text-center text-secondary fw-normal my-4" style="font-family:inherit;">Create an account</h1>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="alert alert-danger py-2"><%= error %></div>
+      <% } %>
+
+      <form method="POST" action="/register" id="registerForm">
+        <div class="mb-3">
+          <label for="name" class="form-label">Full name</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fa-regular fa-user"></i></span>
+            <input type="text" class="form-control" id="name" name="name" required autofocus
+                   value="<%= form.name || '' %>" placeholder="Your full name">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="email" class="form-label">Email</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fa-regular fa-envelope"></i></span>
+            <input type="email" class="form-control" id="email" name="email" required
+                   value="<%= form.email || '' %>" placeholder="you@crawford.edu.ng">
+          </div>
+        </div>
+
+        <div class="row g-2">
+          <div class="col-6 mb-3">
+            <label for="password" class="form-label">Password</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+              <input type="password" class="form-control" id="password" name="password" required minlength="8" placeholder="min. 8 characters">
+            </div>
+          </div>
+          <div class="col-6 mb-3">
+            <label for="confirm_password" class="form-label">Confirm</label>
+            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required minlength="8" placeholder="repeat password">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="role" class="form-label">I am a…</label>
+          <select class="form-select" id="role" name="role" required>
+            <option value="">— choose a role —</option>
+            <% ['student','lecturer','hod','dean'].forEach(function(r){ %>
+              <option value="<%= r %>" <%= form.role === r ? 'selected' : '' %>>
+                <%= r === 'hod' ? 'Head of Department' : r.charAt(0).toUpperCase() + r.slice(1) %>
+              </option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="mb-3 role-field role-field-dept">
+          <label for="department_id" class="form-label">Department</label>
+          <select class="form-select" id="department_id" name="department_id">
+            <option value="">— select a department —</option>
+            <% departments.forEach(function(d){ %>
+              <option value="<%= d.id %>" <%= String(form.department_id) === String(d.id) ? 'selected' : '' %>><%= d.name %></option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="mb-3 role-field role-field-level">
+          <label for="level" class="form-label">Level</label>
+          <select class="form-select" id="level" name="level">
+            <option value="">— select your level —</option>
+            <% [100,200,300,400,500].forEach(function(l){ %>
+              <option value="<%= l %>" <%= String(form.level) === String(l) ? 'selected' : '' %>><%= l %> level</option>
+            <% }) %>
+          </select>
+        </div>
+
+        <div class="mb-3 role-field role-field-college">
+          <label for="college_id" class="form-label">College</label>
+          <select class="form-select" id="college_id" name="college_id">
+            <option value="">— select a college —</option>
+            <% colleges.forEach(function(c){ %>
+              <option value="<%= c.id %>" <%= String(form.college_id) === String(c.id) ? 'selected' : '' %>><%= c.name %></option>
+            <% }) %>
+          </select>
+          <div class="form-text">If a college already has a Dean, your account is still created — the registrar can reassign headship afterward.</div>
+        </div>
+
+        <button class="btn btn-gold w-100" type="submit"><i class="fa-solid fa-user-plus me-1"></i> Create account</button>
+      </form>
+
+      <p class="text-center small text-secondary mt-3 mb-0">
+        Already have an account? <a href="/login">Sign in</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Progressive enhancement only — show just the fields relevant to the
+    // chosen role. The server validates required fields regardless, so this
+    // never gates what's actually enforced.
+    (function () {
+      var roleSelect = document.getElementById('role');
+      var fieldsByRole = {
+        student: ['role-field-dept', 'role-field-level'],
+        lecturer: ['role-field-dept'],
+        hod: ['role-field-dept'],
+        dean: ['role-field-college'],
+      };
+      var allFieldClasses = ['role-field-dept', 'role-field-level', 'role-field-college'];
+
+      function applyVisibility() {
+        var role = roleSelect.value;
+        var toShow = fieldsByRole[role] || [];
+        allFieldClasses.forEach(function (cls) {
+          document.querySelectorAll('.' + cls).forEach(function (el) {
+            el.style.display = toShow.indexOf(cls) !== -1 ? '' : 'none';
+          });
+        });
+      }
+
+      roleSelect.addEventListener('change', applyVisibility);
+      applyVisibility();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign in · Crawford LTMS</title>
+  <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/css/custom.css">
+</head>
+<body class="login-wrap d-flex align-items-center justify-content-center p-3">
+  <div class="card login-card shadow-lg w-100">
+    <div class="card-body p-4">
+      <div class="brand-crest text-center"><i class="fa-solid fa-graduation-cap"></i> Crawford University<small>Lecture Timetable Management System</small></div>
+      <h1 class="h6 text-center text-secondary fw-normal my-4" style="font-family:inherit;">Sign in to your account</h1>
+
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="alert alert-danger py-2"><%= error %></div>
+      <% } %>
+
+      <form method="POST" action="/login">
+        <div class="mb-3">
+          <label for="email" class="form-label">Email</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fa-regular fa-envelope"></i></span>
+            <input type="email" class="form-control" id="email" name="email" required autofocus placeholder="you@crawford.edu.ng">
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="password" class="form-label">Password</label>
+          <div class="input-group">
+            <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+            <input type="password" class="form-control" id="password" name="password" required placeholder="••••••••">
+          </div>
+        </div>
+        <button class="btn btn-gold w-100" type="submit"><i class="fa-solid fa-right-to-bracket me-1"></i> Sign in</button>
+      </form>
+
+      <p class="text-center small text-secondary mt-3 mb-2">New here? Register as:</p>
+      <div class="row g-2 mb-1">
+        <div class="col-6"><a href="/register/student" class="btn btn-outline-secondary btn-sm w-100"><i class="fa-solid fa-user-graduate me-1"></i>Student</a></div>
+        <div class="col-6"><a href="/register/lecturer" class="btn btn-outline-secondary btn-sm w-100"><i class="fa-solid fa-chalkboard-user me-1"></i>Lecturer</a></div>
+        <div class="col-6"><a href="/register/hod" class="btn btn-outline-secondary btn-sm w-100"><i class="fa-solid fa-building-columns me-1"></i>HOD</a></div>
+        <div class="col-6"><a href="/register/dean" class="btn btn-outline-secondary btn-sm w-100"><i class="fa-solid fa-landmark me-1"></i>Dean</a></div>
+      </div>
+
+      <div class="mt-4 pt-3 border-top small text-secondary">
+        Demo accounts (password: <strong>password123</strong>)
+        <table class="table table-sm mt-2 mb-0" style="font-size:.72rem;">
+          <tbody>
+            <tr><td class="font-monospace">admin@crawford.edu.ng</td><td>Registrar</td></tr>
+            <tr><td class="font-monospace">dean@crawford.edu.ng</td><td>Dean</td></tr>
+            <tr><td class="font-monospace">hod.cs@crawford.edu.ng</td><td>HOD, Computer Science</td></tr>
+            <tr><td class="font-monospace">lecturer1@crawford.edu.ng</td><td>Lecturer</td></tr>
+            <tr><td class="font-monospace">student1@crawford.edu.ng</td><td>Student</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

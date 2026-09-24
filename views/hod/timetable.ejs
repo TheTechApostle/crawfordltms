@@ -1,0 +1,16 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Head of Department<% if (dept && dept.college_name) { %> · <%= dept.college_name %><% } %></div><h1 class="h3 mb-0">Department timetable</h1></div>
+  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+</div>
+
+<div class="card"><div class="card-body">
+  <% if (!dept) { %>
+    <div class="text-center py-5 text-secondary"><h3 class="h5 text-dark">No department assigned</h3><p>Ask the registrar to link your account to a department.</p></div>
+  <% } else { %>
+    <h2 class="h6 card-title"><i class="fa-solid fa-table-cells me-1 text-secondary"></i> <%= dept.name %></h2>
+    <p class="text-secondary small">Click a course code for the full picture — lecturer, venue, registered count, and current approval status.</p>
+    <%- include('../partials/timetable-grid', { entries, bands }) %>
+  <% } %>
+</div></div>
+
+<%- include('../partials/course-detail-modal') %>

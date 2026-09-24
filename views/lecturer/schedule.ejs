@@ -1,0 +1,52 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Lecturer · <%= offering.code %></div><h1 class="h3 mb-0">Set timetable</h1></div>
+  <a class="btn btn-sm btn-outline-secondary" href="/lecturer/courses"><i class="fa-solid fa-arrow-left me-1"></i> Back to my courses</a>
+</div>
+
+<div class="card"><div class="card-body">
+  <h2 class="h6 card-title"><%= offering.code %> — <%= offering.title %></h2>
+  <p class="text-secondary">
+    <%= offering.registered_count %> student<%= offering.registered_count === 1 ? '' : 's' %> registered.
+    Only timeslots where a venue that actually fits the class is free are listed below — each is already paired
+    with the smallest suitable free venue, so a class this size can never end up wasting a much larger hall.
+  </p>
+
+  <% if (offering.registered_count === 0) { %>
+    <div class="text-center py-4 text-secondary">
+      <i class="fa-regular fa-face-meh fa-2x mb-2 d-block text-secondary"></i>
+      <h3 class="h6 text-dark">No students registered yet</h3>
+      <p class="mb-0">Come back once at least one student has registered for this course.</p>
+    </div>
+  <% } else if (shortfall) { %>
+    <div class="alert alert-danger">
+      <i class="fa-solid fa-triangle-exclamation me-1"></i>
+      No venue on record is large enough for <%= offering.registered_count %> students. Ask the registrar to add a bigger venue.
+    </div>
+  <% } else if (!options.length) { %>
+    <div class="text-center py-4 text-secondary">
+      <i class="fa-regular fa-calendar-xmark fa-2x mb-2 d-block text-secondary"></i>
+      <h3 class="h6 text-dark">No free slot right now</h3>
+      <p class="mb-0">Every timeslot with a big-enough venue is already taken by you or by another class. Check back later, or ask the registrar about adding capacity.</p>
+    </div>
+  <% } else { %>
+    <form method="POST" action="/lecturer/courses/<%= offering.id %>/schedule">
+      <div class="table-responsive"><table class="table table-hover align-middle mb-3">
+        <thead><tr><th></th><th>Day</th><th>Time</th><th>Venue</th><th>Capacity</th><th>Fit</th></tr></thead>
+        <tbody>
+        <% options.forEach(function(o, i){ %>
+          <tr>
+            <td><input class="form-check-input" type="radio" name="timeslot_id" value="<%= o.slot.id %>" id="slot<%= o.slot.id %>" <%= i === 0 ? 'checked' : '' %> required></td>
+            <td><label for="slot<%= o.slot.id %>"><%= o.slot.day %></label></td>
+            <td><label for="slot<%= o.slot.id %>"><%= o.slot.start_time %>–<%= o.slot.end_time %></label></td>
+            <td><label for="slot<%= o.slot.id %>"><%= o.venue.name %></label></td>
+            <td><label for="slot<%= o.slot.id %>"><%= o.venue.capacity %></label></td>
+            <td><label for="slot<%= o.slot.id %>"><%= (o.fitRatio*100).toFixed(0) %>%</label></td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table></div>
+      <button class="btn btn-gold" type="submit"><i class="fa-solid fa-check me-1"></i> Set this slot</button>
+    </form>
+    <p class="form-text mt-2">This goes straight to your HOD for department approval — the same chain any other slot follows before it can be published.</p>
+  <% } %>
+</div></div>

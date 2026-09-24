@@ -1,0 +1,37 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Dean / Timetable Committee</div><h1 class="h3 mb-0"><%= college ? college.name : 'Dashboard' %></h1></div>
+  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+</div>
+
+<% if (!college) { %>
+  <div class="text-center py-5 text-secondary">
+    <i class="fa-solid fa-landmark fa-2x mb-2 d-block text-secondary"></i>
+    <h3 class="h5 text-dark">No college assigned</h3>
+    <p class="mb-0">Ask the registrar to set you as Dean of a college.</p>
+  </div>
+<% } else { %>
+  <div class="row g-3 row-cols-1 row-cols-md-4">
+    <div class="col"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+      <span class="stat-icon"><i class="fa-solid fa-building-columns"></i></span>
+      <div><div class="stat-num"><%= departmentCount %></div><div class="text-secondary small">Departments in college</div></div>
+    </div></div></div>
+    <div class="col"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+      <span class="stat-icon"><i class="fa-solid fa-book"></i></span>
+      <div><div class="stat-num"><%= pendingCourseCount %></div><div class="text-secondary small">Courses awaiting approval</div></div>
+    </div></div></div>
+    <div class="col"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+      <span class="stat-icon"><i class="fa-solid fa-clipboard-check"></i></span>
+      <div><div class="stat-num"><%= pendingCount %></div><div class="text-secondary small">Timetables awaiting final approval</div></div>
+    </div></div></div>
+    <div class="col"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+      <span class="stat-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+      <div><div class="stat-num"><%= clashCount %></div><div class="text-secondary small">Cross-department clashes</div></div>
+    </div></div></div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap mt-4">
+    <a class="btn btn-gold" href="/dean/departments"><i class="fa-solid fa-building-columns me-1"></i> View departments</a>
+    <a class="btn btn-outline-secondary" href="/dean/courses"><i class="fa-solid fa-book me-1"></i> Review course proposals</a>
+    <a class="btn btn-outline-secondary" href="/dean/approvals"><i class="fa-solid fa-clipboard-check me-1"></i> Review approval queue</a>
+    <a class="btn btn-outline-secondary" href="/dean/clashes"><i class="fa-solid fa-triangle-exclamation me-1"></i> View clashes</a>
+  </div>
+<% } %>

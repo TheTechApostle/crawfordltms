@@ -1,0 +1,45 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Timetable</div><h1 class="h3 mb-0">Master timetable</h1></div>
+  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+</div>
+
+<% if (!session) { %>
+  <div class="text-center py-5 text-secondary"><h3 class="h5 text-dark">No active session</h3><p>Activate a session first.</p></div>
+<% } else { %>
+  <div class="card"><div class="card-body">
+    <h2 class="h6 card-title"><i class="fa-solid fa-table-cells me-1 text-secondary"></i> Every scheduled class, university-wide</h2>
+    <p class="text-secondary small">Shows every non-rejected entry with a timeslot assigned — draft, awaiting approval, or published. Click a course code for the full picture.</p>
+
+    <form method="GET" action="/admin/timetable" class="row g-2 align-items-end mb-3">
+      <div class="col-sm-4 col-md-3">
+        <label for="college_id" class="form-label small text-secondary mb-1">College</label>
+        <select class="form-select form-select-sm" id="college_id" name="college_id" onchange="this.form.department_id.value=''; this.form.submit()">
+          <option value="">All colleges</option>
+          <% colleges.forEach(function(c){ %>
+            <option value="<%= c.id %>" <%= String(collegeId) === String(c.id) ? 'selected' : '' %>><%= c.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="col-sm-4 col-md-3">
+        <label for="department_id" class="form-label small text-secondary mb-1">Department</label>
+        <select class="form-select form-select-sm" id="department_id" name="department_id" onchange="this.form.submit()">
+          <option value="">All departments</option>
+          <% departments.forEach(function(d){ %>
+            <% if (!collegeId || String(d.college_id) === String(collegeId)) { %>
+              <option value="<%= d.id %>" <%= String(departmentId) === String(d.id) ? 'selected' : '' %>><%= d.name %></option>
+            <% } %>
+          <% }) %>
+        </select>
+      </div>
+      <% if (collegeId || departmentId) { %>
+        <div class="col-sm-4 col-md-3">
+          <a href="/admin/timetable" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-xmark me-1"></i> Clear filters</a>
+        </div>
+      <% } %>
+    </form>
+
+    <%- include('../partials/timetable-grid', { entries, bands }) %>
+  </div></div>
+<% } %>
+
+<%- include('../partials/course-detail-modal') %>

@@ -1,0 +1,69 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Academic structure</div><h1 class="h3 mb-0">Programmes</h1></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-diagram-project me-1 text-secondary"></i> All programmes</h2>
+      <p class="text-secondary small">A department can run several programmes — courses are uploaded against a programme, not just the bare department.</p>
+      <% if (!programmes.length) { %>
+        <p class="text-secondary mb-0">No programmes yet — add one under a department.</p>
+      <% } else { %>
+
+        <% programmes.forEach(function(p){ %>
+          <form id="edit-prog-<%= p.id %>" method="POST" action="/admin/programmes/<%= p.id %>/edit"></form>
+          <form id="delete-prog-<%= p.id %>" method="POST" action="/admin/programmes/<%= p.id %>/delete"></form>
+        <% }) %>
+
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+          <thead><tr><th>Code</th><th>Name</th><th>Department</th><th>College</th><th>Courses</th><th style="min-width:150px;"></th></tr></thead>
+          <tbody>
+          <% programmes.forEach(function(p){ %>
+            <tr>
+              <td><input form="edit-prog-<%= p.id %>" class="form-control form-control-sm font-monospace" style="width:90px;" name="code" value="<%= p.code %>" required></td>
+              <td><input form="edit-prog-<%= p.id %>" class="form-control form-control-sm" name="name" value="<%= p.name %>" required></td>
+              <td>
+                <select form="edit-prog-<%= p.id %>" class="form-select form-select-sm" name="department_id" required>
+                  <% departments.forEach(function(d){ %>
+                    <option value="<%= d.id %>" <%= p.department_id === d.id ? 'selected' : '' %>><%= d.name %></option>
+                  <% }) %>
+                </select>
+              </td>
+              <td class="text-secondary small"><%= p.college_name || '—' %></td>
+              <td><span class="badge bg-light text-dark border"><%= p.course_count %></span></td>
+              <td class="d-flex gap-2">
+                <button form="edit-prog-<%= p.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
+                <button form="delete-prog-<%= p.id %>" class="btn btn-sm btn-danger" type="submit" <%= p.course_count > 0 ? 'disabled title="Move or delete its courses first"' : '' %> data-confirm="Delete this programme?"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+              </td>
+            </tr>
+          <% }) %>
+          </tbody>
+        </table></div>
+      <% } %>
+    </div></div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-plus me-1 text-secondary"></i> Add programme</h2>
+      <form method="POST" action="/admin/programmes">
+        <div class="mb-3">
+          <label for="name" class="form-label">Programme name</label>
+          <input class="form-control" id="name" name="name" required placeholder="Cyber Security">
+        </div>
+        <div class="mb-3">
+          <label for="code" class="form-label">Code</label>
+          <input class="form-control" id="code" name="code" required placeholder="CYB">
+        </div>
+        <div class="mb-3">
+          <label for="department_id" class="form-label">Department</label>
+          <select class="form-select" id="department_id" name="department_id" required>
+            <% departments.forEach(function(d){ %><option value="<%= d.id %>"><%= d.name %></option><% }) %>
+          </select>
+        </div>
+        <button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Add programme</button>
+      </form>
+    </div></div>
+  </div>
+</div>

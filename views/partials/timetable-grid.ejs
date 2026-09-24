@@ -1,0 +1,75 @@
+<%
+  const __days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+  const __bandKey = b => b.start_time + '|' + b.end_time;
+  const __grid = {};
+  bands.forEach(function (b) {
+    __grid[__bandKey(b)] = {};
+    __days.forEach(function (d) { __grid[__bandKey(b)][d] = []; });
+  });
+  entries.forEach(function (e) {
+    if (!e.start_time || !e.day) return;
+    const k = e.start_time + '|' + e.end_time;
+    if (!__grid[k] || !__grid[k][e.day]) return;
+    __grid[k][e.day].push(e);
+  });
+%>
+
+<% if (!bands.length) { %>
+  <div class="text-center py-5 text-secondary">
+    <i class="fa-regular fa-calendar fa-2x mb-2 d-block text-secondary"></i>
+    <h3 class="h6 text-dark">No timeslots configured yet</h3>
+    <p class="mb-0">Ask the registrar to add timeslots before a grid can be shown.</p>
+  </div>
+<% } else { %>
+  <div class="table-responsive">
+    <table class="table table-bordered align-top mb-0 grid-table">
+      <thead>
+        <tr>
+          <th class="grid-timecol">Time</th>
+          <% __days.forEach(function (d) { %><th class="text-center"><%= d %></th><% }) %>
+        </tr>
+      </thead>
+      <tbody>
+        <% bands.forEach(function (b) { %>
+          <tr>
+            <td class="grid-timecol"><%= b.start_time %>–<%= b.end_time %></td>
+            <% __days.forEach(function (d) {
+                 const list = __grid[__bandKey(b)][d];
+            %>
+              <td>
+                <% if (!list.length) { %>
+                  <span class="text-secondary">—</span>
+                <% } else { %>
+                  <% if (list.length > 1) { %>
+                    <div class="mb-1"><span class="badge bg-light text-dark border"><%= list.length %> classes</span></div>
+                  <% } %>
+                  <% list.forEach(function (e) { %>
+                    <button type="button"
+                            class="btn grid-chip badge-<%= e.status %>"
+                            data-bs-toggle="modal" data-bs-target="#courseDetailModal"
+                            data-code="<%= e.code %>"
+                            data-title="<%= e.title %>"
+                            data-dept="<%= e.dept_name || '' %>"
+                            data-college="<%= e.college_name || '' %>"
+                            data-lecturer="<%= e.lecturer_name || 'Unassigned' %>"
+                            data-venue="<%= e.venue_name || '—' %>"
+                            data-capacity="<%= e.capacity || '' %>"
+                            data-registered="<%= e.registered_count != null ? e.registered_count : '' %>"
+                            data-status="<%= e.status %>"
+                            data-day="<%= e.day %>"
+                            data-start="<%= e.start_time %>"
+                            data-end="<%= e.end_time %>"
+                            data-provisional="<%= e.is_provisional ? '1' : '' %>">
+                      <%= e.code %><% if (e.is_provisional) { %><sup title="Provisional — based on estimated class size, not yet real registrations">*</sup><% } %>
+                    </button>
+                  <% }) %>
+                <% } %>
+              </td>
+            <% }) %>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <p class="form-text mt-2 mb-0">Click any course code for full details. Scroll horizontally on smaller screens.</p>
+<% } %>

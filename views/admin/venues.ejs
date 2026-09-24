@@ -1,0 +1,54 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Academic structure</div><h1 class="h3 mb-0">Venues</h1></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-door-open me-1 text-secondary"></i> All venues</h2>
+
+      <% venues.forEach(function(v){ %>
+        <form id="edit-venue-<%= v.id %>" method="POST" action="/admin/venues/<%= v.id %>/edit"></form>
+        <form id="delete-venue-<%= v.id %>" method="POST" action="/admin/venues/<%= v.id %>/delete"></form>
+      <% }) %>
+
+      <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Name</th><th>Building</th><th>Capacity</th><th style="min-width:150px;"></th></tr></thead>
+        <tbody>
+        <% venues.forEach(function(v){ %>
+          <tr>
+            <td><input form="edit-venue-<%= v.id %>" class="form-control form-control-sm" name="name" value="<%= v.name %>" required></td>
+            <td><input form="edit-venue-<%= v.id %>" class="form-control form-control-sm" name="building" value="<%= v.building || '' %>"></td>
+            <td><input form="edit-venue-<%= v.id %>" class="form-control form-control-sm" name="capacity" type="number" style="width:90px;" value="<%= v.capacity %>" required></td>
+            <td class="d-flex gap-2">
+              <button form="edit-venue-<%= v.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
+              <button form="delete-venue-<%= v.id %>" class="btn btn-sm btn-danger" type="submit" <%= v.use_count > 0 ? 'disabled title="Already used in a timetable entry"' : '' %> data-confirm="Delete this venue?"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table></div>
+    </div></div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-plus me-1 text-secondary"></i> Add venue</h2>
+      <form method="POST" action="/admin/venues">
+        <div class="mb-3">
+          <label for="name" class="form-label">Venue name</label>
+          <input class="form-control" id="name" name="name" required placeholder="Lecture Theatre 1">
+        </div>
+        <div class="mb-3">
+          <label for="building" class="form-label">Building</label>
+          <input class="form-control" id="building" name="building" placeholder="Main Block">
+        </div>
+        <div class="mb-3">
+          <label for="capacity" class="form-label">Capacity</label>
+          <input class="form-control" id="capacity" name="capacity" type="number" required placeholder="200">
+        </div>
+        <button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Add venue</button>
+      </form>
+    </div></div>
+  </div>
+</div>

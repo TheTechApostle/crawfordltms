@@ -1,0 +1,60 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Academic structure</div><h1 class="h3 mb-0">Timeslots</h1></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-regular fa-clock me-1 text-secondary"></i> All timeslots</h2>
+
+      <% timeslots.forEach(function(t){ %>
+        <form id="edit-slot-<%= t.id %>" method="POST" action="/admin/timeslots/<%= t.id %>/edit"></form>
+        <form id="delete-slot-<%= t.id %>" method="POST" action="/admin/timeslots/<%= t.id %>/delete"></form>
+      <% }) %>
+
+      <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Day</th><th>Start</th><th>End</th><th style="min-width:150px;"></th></tr></thead>
+        <tbody>
+        <% timeslots.forEach(function(t){ %>
+          <tr>
+            <td>
+              <select form="edit-slot-<%= t.id %>" class="form-select form-select-sm" name="day" required>
+                <% ['Monday','Tuesday','Wednesday','Thursday','Friday'].forEach(function(d){ %>
+                  <option value="<%= d %>" <%= t.day === d ? 'selected' : '' %>><%= d %></option>
+                <% }) %>
+              </select>
+            </td>
+            <td><input form="edit-slot-<%= t.id %>" class="form-control form-control-sm" name="start_time" type="time" value="<%= t.start_time %>" required></td>
+            <td><input form="edit-slot-<%= t.id %>" class="form-control form-control-sm" name="end_time" type="time" value="<%= t.end_time %>" required></td>
+            <td class="d-flex gap-2">
+              <button form="edit-slot-<%= t.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
+              <button form="delete-slot-<%= t.id %>" class="btn btn-sm btn-danger" type="submit" <%= t.use_count > 0 ? 'disabled title="Already used in a timetable entry"' : '' %> data-confirm="Delete this timeslot?"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table></div>
+    </div></div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-plus me-1 text-secondary"></i> Add timeslot</h2>
+      <form method="POST" action="/admin/timeslots">
+        <div class="mb-3">
+          <label for="day" class="form-label">Day</label>
+          <select class="form-select" id="day" name="day" required>
+            <% ['Monday','Tuesday','Wednesday','Thursday','Friday'].forEach(function(d){ %>
+              <option value="<%= d %>"><%= d %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="row g-2">
+          <div class="col-6 mb-3"><label for="start_time" class="form-label">Start</label><input class="form-control" id="start_time" name="start_time" type="time" required></div>
+          <div class="col-6 mb-3"><label for="end_time" class="form-label">End</label><input class="form-control" id="end_time" name="end_time" type="time" required></div>
+        </div>
+        <button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Add timeslot</button>
+      </form>
+    </div></div>
+  </div>
+</div>

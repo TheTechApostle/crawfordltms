@@ -1,0 +1,81 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Academic structure</div><h1 class="h3 mb-0">Departments</h1></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-building-columns me-1 text-secondary"></i> All departments</h2>
+
+      <% departments.forEach(function(d){ %>
+        <form id="edit-dept-<%= d.id %>" method="POST" action="/admin/departments/<%= d.id %>/edit"></form>
+        <form id="delete-dept-<%= d.id %>" method="POST" action="/admin/departments/<%= d.id %>/delete"></form>
+      <% }) %>
+
+      <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Code</th><th>Name</th><th>College</th><th>HOD</th><th>Programmes</th><th style="min-width:150px;"></th></tr></thead>
+        <tbody>
+        <% departments.forEach(function(d){ %>
+          <tr>
+            <td><input form="edit-dept-<%= d.id %>" class="form-control form-control-sm font-monospace" style="width:90px;" name="code" value="<%= d.code %>" required></td>
+            <td><input form="edit-dept-<%= d.id %>" class="form-control form-control-sm" name="name" value="<%= d.name %>" required></td>
+            <td>
+              <select form="edit-dept-<%= d.id %>" class="form-select form-select-sm" name="college_id">
+                <option value="">— unassigned —</option>
+                <% colleges.forEach(function(c){ %>
+                  <option value="<%= c.id %>" <%= d.college_id === c.id ? 'selected' : '' %>><%= c.name %></option>
+                <% }) %>
+              </select>
+            </td>
+            <td>
+              <select form="edit-dept-<%= d.id %>" class="form-select form-select-sm" name="hod_id">
+                <option value="">— unassigned —</option>
+                <% hods.forEach(function(h){ %>
+                  <option value="<%= h.id %>" <%= d.hod_id === h.id ? 'selected' : '' %>><%= h.name %></option>
+                <% }) %>
+              </select>
+            </td>
+            <td><span class="badge bg-light text-dark border"><%= d.programme_count %></span></td>
+            <td class="d-flex gap-2">
+              <button form="edit-dept-<%= d.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
+              <button form="delete-dept-<%= d.id %>" class="btn btn-sm btn-danger" type="submit" <%= (d.course_count > 0 || d.user_count > 0) ? 'disabled title="Has courses or members — move/remove those first"' : '' %> data-confirm="Delete this department?"><i class="fa-solid fa-trash me-1"></i> Delete</button>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table></div>
+      <p class="form-text mt-2 mb-0">Reassigning the HOD here actually hands them the department's approval queue — not just a label change.</p>
+    </div></div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-plus me-1 text-secondary"></i> Add department</h2>
+      <form method="POST" action="/admin/departments">
+        <div class="mb-3">
+          <label for="name" class="form-label">Department name</label>
+          <input class="form-control" id="name" name="name" required placeholder="Computer Science">
+        </div>
+        <div class="mb-3">
+          <label for="code" class="form-label">Code</label>
+          <input class="form-control" id="code" name="code" required placeholder="CSC">
+        </div>
+        <div class="mb-3">
+          <label for="college_id" class="form-label">College</label>
+          <select class="form-select" id="college_id" name="college_id">
+            <option value="">— unassigned —</option>
+            <% colleges.forEach(function(c){ %><option value="<%= c.id %>"><%= c.name %></option><% }) %>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="hod_id" class="form-label">Head of Department</label>
+          <select class="form-select" id="hod_id" name="hod_id">
+            <option value="">— unassigned —</option>
+            <% hods.forEach(function(h){ %><option value="<%= h.id %>"><%= h.name %></option><% }) %>
+          </select>
+        </div>
+        <button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Add department</button>
+      </form>
+    </div></div>
+  </div>
+</div>
