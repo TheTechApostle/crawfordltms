@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create an account · Crawford LTMS</title>
+  <link rel="stylesheet" href="/vendor/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/css/custom.css">
+</head>
+<body class="login-wrap d-flex align-items-center justify-content-center p-3">
+  <div class="card login-card shadow-lg w-100" style="max-width:480px;">
+    <div class="card-body p-4">
+      <div class="brand-crest text-center"><i class="fa-solid fa-graduation-cap"></i> Crawford University<small>Lecture Timetable Management System</small></div>
+      <h1 class="h6 text-center text-secondary fw-normal my-4" style="font-family:inherit;">Which account are you creating?</h1>
+
+      <div class="list-group mb-2">
+        <a href="/register/student" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+          <span class="stat-icon"><i class="fa-solid fa-user-graduate"></i></span>
+          <span>
+            <span class="d-block fw-medium text-dark">Student</span>
+            <span class="d-block small text-secondary">Register courses, view your published timetable</span>
+          </span>
+        </a>
+        <a href="/register/lecturer" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+          <span class="stat-icon"><i class="fa-solid fa-chalkboard-user"></i></span>
+          <span>
+            <span class="d-block fw-medium text-dark">Lecturer</span>
+            <span class="d-block small text-secondary">Review and accept draft teaching slots</span>
+          </span>
+        </a>
+        <a href="/register/hod" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+          <span class="stat-icon"><i class="fa-solid fa-building-columns"></i></span>
+          <span>
+            <span class="d-block fw-medium text-dark">Head of Department</span>
+            <span class="d-block small text-secondary">Assign lecturers, approve your department's timetable</span>
+          </span>
+        </a>
+        <a href="/register/dean" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3">
+          <span class="stat-icon"><i class="fa-solid fa-landmark"></i></span>
+          <span>
+            <span class="d-block fw-medium text-dark">Dean</span>
+            <span class="d-block small text-secondary">Final approval across your faculty's departments</span>
+          </span>
+        </a>
+      </div>
+
+      <p class="text-center small text-secondary mt-3 mb-0">
+        Already have an account? <a href="/login">Sign in</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>

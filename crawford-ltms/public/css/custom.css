@@ -1,0 +1,227 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --brand-ink: #1B2A4A;
+  --brand-ink-2: #2E4470;
+  --brand-gold: #A9803F;
+  --brand-gold-tint: #F1E6CC;
+  --brand-paper: #F6F4EC;
+
+  /* Retint Bootstrap's own variables so every stock component (buttons,
+     links, focus rings, form controls) picks up the brand automatically. */
+  --bs-primary: var(--brand-ink);
+  --bs-primary-rgb: 27, 42, 74;
+  --bs-link-color: var(--brand-ink-2);
+  --bs-link-hover-color: var(--brand-ink);
+  --bs-body-bg: var(--brand-paper);
+  --bs-body-font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --bs-border-radius: .3rem;
+  --bs-border-radius-sm: .25rem;
+  --bs-border-radius-lg: .35rem;
+}
+
+body { font-size: .92rem; }
+
+h1, h2, h3, h4, h5, .navbar-brand, .card-title {
+  font-family: 'Source Serif 4', Georgia, serif;
+  color: var(--brand-ink);
+  font-weight: 600;
+}
+
+a { text-decoration: none; }
+
+.btn-primary {
+  --bs-btn-bg: var(--brand-ink);
+  --bs-btn-border-color: var(--brand-ink);
+  --bs-btn-hover-bg: var(--brand-ink-2);
+  --bs-btn-hover-border-color: var(--brand-ink-2);
+  --bs-btn-active-bg: var(--brand-ink-2);
+  --bs-btn-active-border-color: var(--brand-ink-2);
+}
+
+.btn-gold {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--brand-gold);
+  --bs-btn-border-color: var(--brand-gold);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #8f6c32;
+  --bs-btn-hover-border-color: #8f6c32;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #8f6c32;
+}
+
+/* ---------- Kicker / page header ---------- */
+.kicker {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #6c757d;
+}
+
+/* ---------- App shell / sidebar ---------- */
+.brand-crest {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.brand-crest small {
+  display: block;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: .68rem;
+  letter-spacing: .04em;
+  font-weight: 400;
+  opacity: .75;
+}
+
+.sidebar {
+  background: var(--brand-ink);
+  border-right: 3px solid var(--brand-gold);
+  min-height: 100vh;
+  color: #D9DEEA;
+}
+
+.sidebar .nav-link {
+  color: #C7CEE0;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  font-size: .88rem;
+  padding: .55rem .9rem;
+}
+.sidebar .nav-link:hover { background: rgba(255,255,255,.06); color: #fff; }
+.sidebar .nav-link.active {
+  background: rgba(169,128,63,.18);
+  color: #fff;
+  border-left-color: var(--brand-gold);
+  font-weight: 500;
+}
+.sidebar .nav-section-label {
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #7C87A6;
+  padding: .9rem .9rem .3rem;
+}
+.sidebar .side-foot {
+  border-top: 1px solid rgba(255,255,255,.1);
+  font-size: .8rem;
+}
+.sidebar .role-badge {
+  font-size: .68rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  background: rgba(169,128,63,.25);
+  color: var(--brand-gold-tint);
+}
+
+.offcanvas-dark {
+  background: var(--brand-ink);
+  color: #D9DEEA;
+}
+
+/* ---------- Status badges ---------- */
+.badge-draft { background: #E9EDF5; color: var(--brand-ink-2); }
+.badge-lecturer_ok, .badge-hod_ok { background: #F6E9D2; color: #B4791F; }
+.badge-final { background: var(--brand-gold-tint); color: var(--brand-gold); }
+.badge-published { background: #E4EEE6; color: #3F6B4F; }
+.badge-rejected, .badge-shortfall { background: #F5E4DF; color: #A3402F; }
+
+/* ---------- Stat tiles ---------- */
+.stat-card { border-left: 4px solid var(--brand-gold); }
+.stat-card .stat-num {
+  font-family: 'Source Serif 4', Georgia, serif;
+  font-size: 1.7rem;
+  font-weight: 600;
+  color: var(--brand-ink);
+}
+.stat-icon {
+  width: 2.4rem; height: 2.4rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: var(--brand-gold-tint);
+  color: var(--brand-gold);
+  font-size: 1rem;
+}
+
+/* ---------- Login ---------- */
+.login-wrap {
+  min-height: 100vh;
+  background: var(--brand-ink);
+  background-image: radial-gradient(circle at 15% 15%, rgba(169,128,63,.18), transparent 45%);
+}
+.login-card { border-top: 4px solid var(--brand-gold); max-width: 400px; }
+
+/* ---------- Timetable weekly grid ---------- */
+.timetable-grid {
+  display: grid;
+  grid-template-columns: 90px repeat(5, minmax(150px, 1fr));
+  border: 1px solid #dee2e6;
+  border-radius: var(--bs-border-radius);
+  overflow: auto;
+  background: #fff;
+}
+.tt-head, .tt-time, .tt-cell {
+  border-right: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+  padding: .55rem .6rem;
+  min-height: 64px;
+}
+.tt-head {
+  background: var(--brand-ink); color: #fff;
+  font-family: 'Source Serif 4', Georgia, serif; font-weight: 600;
+  text-align: center; font-size: .85rem;
+  position: sticky; top: 0; z-index: 2;
+}
+.tt-time {
+  background: #E9EDF5; color: var(--brand-ink-2);
+  font-family: ui-monospace, monospace; font-size: .72rem;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+}
+.tt-cell { font-size: .78rem; }
+.tt-entry {
+  background: var(--brand-gold-tint); border-left: 3px solid var(--brand-gold);
+  border-radius: 2px; padding: .35rem .5rem; margin-bottom: .3rem;
+}
+.tt-entry .course { font-weight: 600; color: var(--brand-ink); }
+.tt-entry .meta { color: #6c757d; font-size: .7rem; }
+.tt-entry-btn {
+  display: block; width: 100%; text-align: left; border: none;
+  border-left: 3px solid var(--brand-gold); cursor: pointer;
+}
+.tt-entry-btn:hover { filter: brightness(0.97); }
+
+/* ---------- Master/department/faculty timetable grid (bands x days) ---------- */
+.grid-table { font-size: .82rem; }
+.grid-table th, .grid-table td {
+  vertical-align: top;
+  min-width: 140px;
+}
+.grid-table thead th {
+  background: var(--brand-ink); color: #fff;
+  font-family: 'Source Serif 4', Georgia, serif; font-weight: 600;
+  position: sticky; top: 0; z-index: 2;
+}
+.grid-timecol {
+  background: #E9EDF5; color: var(--brand-ink-2);
+  font-family: ui-monospace, monospace; font-size: .72rem;
+  white-space: nowrap; min-width: 90px !important; width: 90px;
+}
+.grid-chip {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: ui-monospace, monospace;
+  font-size: .74rem;
+  font-weight: 600;
+  padding: .2rem .45rem;
+  border: none;
+  border-left: 3px solid var(--brand-gold);
+  border-radius: 2px;
+  margin-bottom: 3px;
+  cursor: pointer;
+}
+.grid-chip:hover { filter: brightness(0.95); }
+.grid-chip:last-child { margin-bottom: 0; }
+
+@media (max-width: 991.98px) {
+  .timetable-grid { grid-template-columns: 70px repeat(5, minmax(130px, 1fr)); font-size: .76rem; }
+}

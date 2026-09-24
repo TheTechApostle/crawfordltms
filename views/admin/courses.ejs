@@ -26,7 +26,11 @@
       <% }) %>
 
       <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+<<<<<<< HEAD
         <thead><tr><th style="min-width:100px;">Code</th><th style="min-width:180px;">Title</th><th>Dept</th><th>Programme</th><th>Level</th><th>Units</th><th>Est. size</th><th>Status</th><th style="min-width:260px;"></th></tr></thead>
+=======
+        <thead><tr><th style="min-width:100px;">Code</th><th style="min-width:180px;">Title</th><th>Dept</th><th>Level</th><th>Units</th><th>Status</th><th style="min-width:260px;"></th></tr></thead>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
         <tbody>
         <% courses.forEach(function(c){ %>
           <tr>
@@ -39,6 +43,7 @@
                 <% }) %>
               </select>
             </td>
+<<<<<<< HEAD
             <td>
               <select form="edit-course-<%= c.id %>" class="form-select form-select-sm" name="programme_id">
                 <option value="">— none —</option>
@@ -50,6 +55,10 @@
             <td><input form="edit-course-<%= c.id %>" class="form-control form-control-sm" name="level" type="number" style="width:75px;" value="<%= c.level %>" required></td>
             <td><input form="edit-course-<%= c.id %>" class="form-control form-control-sm" name="credit_units" type="number" style="width:65px;" value="<%= c.credit_units %>"></td>
             <td><input form="edit-course-<%= c.id %>" class="form-control form-control-sm" name="expected_class_size" type="number" style="width:80px;" value="<%= c.expected_class_size || '' %>" placeholder="—"></td>
+=======
+            <td><input form="edit-course-<%= c.id %>" class="form-control form-control-sm" name="level" type="number" style="width:75px;" value="<%= c.level %>" required></td>
+            <td><input form="edit-course-<%= c.id %>" class="form-control form-control-sm" name="credit_units" type="number" style="width:65px;" value="<%= c.credit_units %>"></td>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
             <td><span class="badge badge-<%= c.status === 'approved' ? 'published' : (c.status === 'rejected' ? 'rejected' : 'draft') %>"><%= c.status %></span></td>
             <td class="d-flex gap-2 flex-wrap">
               <button form="edit-course-<%= c.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
@@ -92,6 +101,7 @@
             </select>
           </div>
         </div>
+<<<<<<< HEAD
         <div class="row g-2">
           <div class="col-6 mb-3">
             <label for="programme_id" class="form-label">Programme</label>
@@ -106,6 +116,8 @@
             <div class="form-text">Lets the allocation engine draft a provisional venue/slot before students register.</div>
           </div>
         </div>
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
         <button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Add course</button>
       </form>
     </div></div>

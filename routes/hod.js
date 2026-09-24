@@ -11,15 +11,24 @@ function activeSession() {
 }
 function myDept(req) {
   return db.prepare(`
+<<<<<<< HEAD
     SELECT d.*, c.name AS college_name FROM departments d
     LEFT JOIN colleges c ON c.id = d.college_id
+=======
+    SELECT d.*, f.name AS faculty_name FROM departments d
+    LEFT JOIN faculties f ON f.id = d.faculty_id
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     WHERE d.id = ?
   `).get(req.session.user.department_id);
 }
 // True if a given timetable entry belongs to this HOD's own department —
 // checked before approve/reject so an HOD can't act outside their own
 // department even if they guess another entry's id (mirrors the same
+<<<<<<< HEAD
 // check on the Dean side for college).
+=======
+// check on the Dean side for faculty).
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 function entryInDept(entryId, departmentId) {
   const row = db.prepare(`
     SELECT c.department_id FROM timetable_entries te
@@ -33,11 +42,18 @@ function entryInDept(entryId, departmentId) {
 router.get('/', (req, res) => {
   const dept = myDept(req);
   const session = activeSession();
+<<<<<<< HEAD
   let pendingCount = 0, courseCount = 0, pendingCourseCount = 0, programmeCount = 0;
   if (dept) {
     courseCount = db.prepare('SELECT COUNT(*) c FROM courses WHERE department_id = ?').get(dept.id).c;
     pendingCourseCount = db.prepare("SELECT COUNT(*) c FROM courses WHERE department_id = ? AND status = 'pending'").get(dept.id).c;
     programmeCount = db.prepare('SELECT COUNT(*) c FROM programmes WHERE department_id = ?').get(dept.id).c;
+=======
+  let pendingCount = 0, courseCount = 0, pendingCourseCount = 0;
+  if (dept) {
+    courseCount = db.prepare('SELECT COUNT(*) c FROM courses WHERE department_id = ?').get(dept.id).c;
+    pendingCourseCount = db.prepare("SELECT COUNT(*) c FROM courses WHERE department_id = ? AND status = 'pending'").get(dept.id).c;
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   }
   if (dept && session) {
     pendingCount = db.prepare(`
@@ -47,6 +63,7 @@ router.get('/', (req, res) => {
       WHERE c.department_id = ? AND co.session_id = ? AND te.status = 'lecturer_ok'
     `).get(dept.id, session.id).c;
   }
+<<<<<<< HEAD
   res.render('hod/dashboard', { title: 'HOD dashboard', dept, session, pendingCount, courseCount, pendingCourseCount, programmeCount });
 });
 
@@ -89,12 +106,16 @@ router.post('/programmes/:id/delete', (req, res) => {
     db.prepare('DELETE FROM programmes WHERE id = ?').run(programme.id);
   }
   res.redirect('/hod/programmes');
+=======
+  res.render('hod/dashboard', { title: 'HOD dashboard', dept, session, pendingCount, courseCount, pendingCourseCount });
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 });
 
 // ---------- Courses (create/edit/delete proposals; Dean approves) ----------
 router.get('/courses', (req, res) => {
   const dept = myDept(req);
   const session = activeSession();
+<<<<<<< HEAD
   let courses = [], programmes = [];
   if (dept) {
     courses = db.prepare(`
@@ -108,16 +129,37 @@ router.get('/courses', (req, res) => {
     programmes = db.prepare('SELECT * FROM programmes WHERE department_id = ? ORDER BY name').all(dept.id);
   }
   res.render('hod/courses', { title: 'Courses', dept, session, courses, programmes });
+=======
+  let courses = [];
+  if (dept) {
+    courses = db.prepare(`
+      SELECT c.*,
+             (SELECT COUNT(*) FROM course_offerings co WHERE co.course_id = c.id AND co.session_id = ?) AS offered_this_session
+      FROM courses c
+      WHERE c.department_id = ?
+      ORDER BY c.code
+    `).all(session ? session.id : 0, dept.id);
+  }
+  res.render('hod/courses', { title: 'Courses', dept, session, courses });
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 });
 
 router.post('/courses', (req, res) => {
   const dept = myDept(req);
   if (!dept) return res.redirect('/hod/courses');
+<<<<<<< HEAD
   const { code, title, credit_units, programme_id, level, expected_class_size } = req.body;
   db.prepare(`
     INSERT INTO courses (code, title, credit_units, department_id, programme_id, level, expected_class_size, status, created_by)
     VALUES (?,?,?,?,?,?,?,'pending',?)
   `).run(code, title, credit_units || 3, dept.id, programme_id || null, level, expected_class_size || null, req.session.user.id);
+=======
+  const { code, title, credit_units, level } = req.body;
+  db.prepare(`
+    INSERT INTO courses (code, title, credit_units, department_id, level, status, created_by)
+    VALUES (?,?,?,?,?,'pending',?)
+  `).run(code, title, credit_units || 3, dept.id, level, req.session.user.id);
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   res.redirect('/hod/courses');
 });
 
@@ -127,6 +169,7 @@ router.post('/courses/:id/edit', (req, res) => {
   // Only editable while it hasn't been signed off yet — once approved, it's
   // locked here (the registrar can still adjust it directly if needed).
   if (!course || !['pending', 'rejected'].includes(course.status)) return res.redirect('/hod/courses');
+<<<<<<< HEAD
   const { code, title, credit_units, programme_id, level, expected_class_size } = req.body;
   // Editing a rejected proposal resubmits it — back to pending, reason cleared.
   db.prepare(`
@@ -134,6 +177,14 @@ router.post('/courses/:id/edit', (req, res) => {
            status = 'pending', reject_reason = NULL
     WHERE id = ?
   `).run(code, title, credit_units || 3, programme_id || null, level, expected_class_size || null, course.id);
+=======
+  const { code, title, credit_units, level } = req.body;
+  // Editing a rejected proposal resubmits it — back to pending, reason cleared.
+  db.prepare(`
+    UPDATE courses SET code = ?, title = ?, credit_units = ?, level = ?, status = 'pending', reject_reason = NULL
+    WHERE id = ?
+  `).run(code, title, credit_units || 3, level, course.id);
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   res.redirect('/hod/courses');
 });
 

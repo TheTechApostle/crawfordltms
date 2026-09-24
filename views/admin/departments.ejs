@@ -13,17 +13,28 @@
       <% }) %>
 
       <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+<<<<<<< HEAD
         <thead><tr><th>Code</th><th>Name</th><th>College</th><th>HOD</th><th>Programmes</th><th style="min-width:150px;"></th></tr></thead>
+=======
+        <thead><tr><th>Code</th><th>Name</th><th>Faculty</th><th>HOD</th><th style="min-width:150px;"></th></tr></thead>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
         <tbody>
         <% departments.forEach(function(d){ %>
           <tr>
             <td><input form="edit-dept-<%= d.id %>" class="form-control form-control-sm font-monospace" style="width:90px;" name="code" value="<%= d.code %>" required></td>
             <td><input form="edit-dept-<%= d.id %>" class="form-control form-control-sm" name="name" value="<%= d.name %>" required></td>
             <td>
+<<<<<<< HEAD
               <select form="edit-dept-<%= d.id %>" class="form-select form-select-sm" name="college_id">
                 <option value="">— unassigned —</option>
                 <% colleges.forEach(function(c){ %>
                   <option value="<%= c.id %>" <%= d.college_id === c.id ? 'selected' : '' %>><%= c.name %></option>
+=======
+              <select form="edit-dept-<%= d.id %>" class="form-select form-select-sm" name="faculty_id">
+                <option value="">— unassigned —</option>
+                <% faculties.forEach(function(f){ %>
+                  <option value="<%= f.id %>" <%= d.faculty_id === f.id ? 'selected' : '' %>><%= f.name %></option>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
                 <% }) %>
               </select>
             </td>
@@ -35,7 +46,10 @@
                 <% }) %>
               </select>
             </td>
+<<<<<<< HEAD
             <td><span class="badge bg-light text-dark border"><%= d.programme_count %></span></td>
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
             <td class="d-flex gap-2">
               <button form="edit-dept-<%= d.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
               <button form="delete-dept-<%= d.id %>" class="btn btn-sm btn-danger" type="submit" <%= (d.course_count > 0 || d.user_count > 0) ? 'disabled title="Has courses or members — move/remove those first"' : '' %> data-confirm="Delete this department?"><i class="fa-solid fa-trash me-1"></i> Delete</button>
@@ -61,10 +75,17 @@
           <input class="form-control" id="code" name="code" required placeholder="CSC">
         </div>
         <div class="mb-3">
+<<<<<<< HEAD
           <label for="college_id" class="form-label">College</label>
           <select class="form-select" id="college_id" name="college_id">
             <option value="">— unassigned —</option>
             <% colleges.forEach(function(c){ %><option value="<%= c.id %>"><%= c.name %></option><% }) %>
+=======
+          <label for="faculty_id" class="form-label">Faculty</label>
+          <select class="form-select" id="faculty_id" name="faculty_id">
+            <option value="">— unassigned —</option>
+            <% faculties.forEach(function(f){ %><option value="<%= f.id %>"><%= f.name %></option><% }) %>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
           </select>
         </div>
         <div class="mb-3">

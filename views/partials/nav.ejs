@@ -4,11 +4,17 @@
     <li class="nav-item"><a href="/admin" class="nav-link <%= isActive('/admin') %>"><i class="fa-solid fa-gauge fa-fw me-2"></i>Dashboard</a></li>
     <li class="nav-section-label">Academic structure</li>
     <li class="nav-item"><a href="/admin/sessions" class="nav-link <%= isActive('/admin/sessions') %>"><i class="fa-solid fa-calendar-days fa-fw me-2"></i>Sessions</a></li>
+<<<<<<< HEAD
     <li class="nav-item"><a href="/admin/colleges" class="nav-link <%= isActive('/admin/colleges') %>"><i class="fa-solid fa-landmark fa-fw me-2"></i>Colleges</a></li>
     <li class="nav-item"><a href="/admin/departments" class="nav-link <%= isActive('/admin/departments') %>"><i class="fa-solid fa-building-columns fa-fw me-2"></i>Departments</a></li>
     <li class="nav-item"><a href="/admin/programmes" class="nav-link <%= isActive('/admin/programmes') %>"><i class="fa-solid fa-diagram-project fa-fw me-2"></i>Programmes</a></li>
     <li class="nav-item"><a href="/admin/courses" class="nav-link <%= isActive('/admin/courses') %>"><i class="fa-solid fa-book fa-fw me-2"></i>Courses</a></li>
     <li class="nav-item"><a href="/admin/students" class="nav-link <%= isActive('/admin/students') %>"><i class="fa-solid fa-user-graduate fa-fw me-2"></i>Students</a></li>
+=======
+    <li class="nav-item"><a href="/admin/faculties" class="nav-link <%= isActive('/admin/faculties') %>"><i class="fa-solid fa-landmark fa-fw me-2"></i>Faculties</a></li>
+    <li class="nav-item"><a href="/admin/departments" class="nav-link <%= isActive('/admin/departments') %>"><i class="fa-solid fa-building-columns fa-fw me-2"></i>Departments</a></li>
+    <li class="nav-item"><a href="/admin/courses" class="nav-link <%= isActive('/admin/courses') %>"><i class="fa-solid fa-book fa-fw me-2"></i>Courses</a></li>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     <li class="nav-item"><a href="/admin/venues" class="nav-link <%= isActive('/admin/venues') %>"><i class="fa-solid fa-door-open fa-fw me-2"></i>Venues</a></li>
     <li class="nav-item"><a href="/admin/timeslots" class="nav-link <%= isActive('/admin/timeslots') %>"><i class="fa-regular fa-clock fa-fw me-2"></i>Timeslots</a></li>
     <li class="nav-section-label">Timetable</li>
@@ -17,7 +23,10 @@
     <li class="nav-item"><a href="/admin/publish" class="nav-link <%= isActive('/admin/publish') %>"><i class="fa-solid fa-paper-plane fa-fw me-2"></i>Publish queue</a></li>
   <% } else if (user.role === 'hod') { %>
     <li class="nav-item"><a href="/hod" class="nav-link <%= isActive('/hod') %>"><i class="fa-solid fa-gauge fa-fw me-2"></i>Dashboard</a></li>
+<<<<<<< HEAD
     <li class="nav-item"><a href="/hod/programmes" class="nav-link <%= isActive('/hod/programmes') %>"><i class="fa-solid fa-diagram-project fa-fw me-2"></i>Programmes</a></li>
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     <li class="nav-item"><a href="/hod/courses" class="nav-link <%= isActive('/hod/courses') %>"><i class="fa-solid fa-book fa-fw me-2"></i>Courses</a></li>
     <li class="nav-item"><a href="/hod/assign" class="nav-link <%= isActive('/hod/assign') %>"><i class="fa-solid fa-chalkboard-user fa-fw me-2"></i>Assign lecturers</a></li>
     <li class="nav-item"><a href="/hod/approvals" class="nav-link <%= isActive('/hod/approvals') %>"><i class="fa-solid fa-clipboard-check fa-fw me-2"></i>Approval queue</a></li>
@@ -25,7 +34,11 @@
   <% } else if (user.role === 'dean') { %>
     <li class="nav-item"><a href="/dean" class="nav-link <%= isActive('/dean') %>"><i class="fa-solid fa-gauge fa-fw me-2"></i>Dashboard</a></li>
     <li class="nav-item"><a href="/dean/departments" class="nav-link <%= isActive('/dean/departments') %>"><i class="fa-solid fa-building-columns fa-fw me-2"></i>Departments</a></li>
+<<<<<<< HEAD
     <li class="nav-item"><a href="/dean/timetable" class="nav-link <%= isActive('/dean/timetable') %>"><i class="fa-solid fa-table-cells fa-fw me-2"></i>College timetable</a></li>
+=======
+    <li class="nav-item"><a href="/dean/timetable" class="nav-link <%= isActive('/dean/timetable') %>"><i class="fa-solid fa-table-cells fa-fw me-2"></i>Faculty timetable</a></li>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     <li class="nav-item"><a href="/dean/courses" class="nav-link <%= isActive('/dean/courses') %>"><i class="fa-solid fa-book fa-fw me-2"></i>Course approvals</a></li>
     <li class="nav-item"><a href="/dean/approvals" class="nav-link <%= isActive('/dean/approvals') %>"><i class="fa-solid fa-clipboard-check fa-fw me-2"></i>Approval queue</a></li>
     <li class="nav-item"><a href="/dean/clashes" class="nav-link <%= isActive('/dean/clashes') %>"><i class="fa-solid fa-triangle-exclamation fa-fw me-2"></i>Cross-dept. clashes</a></li>

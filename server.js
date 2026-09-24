@@ -43,7 +43,11 @@ app.post('/login', (req, res) => {
   }
   req.session.user = {
     id: u.id, name: u.name, email: u.email, role: u.role,
+<<<<<<< HEAD
     department_id: u.department_id, college_id: u.college_id, level: u.level,
+=======
+    department_id: u.department_id, faculty_id: u.faculty_id, level: u.level,
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   };
   res.redirect('/');
 });
@@ -73,26 +77,45 @@ app.get('/register', (req, res) => {
   app.get(`/register/${role}`, (req, res) => {
     if (req.session.user) return res.redirect('/');
     const departments = db.prepare('SELECT * FROM departments ORDER BY name').all();
+<<<<<<< HEAD
     const colleges = db.prepare('SELECT * FROM colleges ORDER BY name').all();
     res.render(`auth/register-${role}`, {
       title: `Register as ${ROLE_LABELS[role]}`, layout: false, departments, colleges, form: {},
+=======
+    const faculties = db.prepare('SELECT * FROM faculties ORDER BY name').all();
+    res.render(`auth/register-${role}`, {
+      title: `Register as ${ROLE_LABELS[role]}`, layout: false, departments, faculties, form: {},
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     });
   });
 
   app.post(`/register/${role}`, (req, res) => {
     const departments = db.prepare('SELECT * FROM departments ORDER BY name').all();
+<<<<<<< HEAD
     const colleges = db.prepare('SELECT * FROM colleges ORDER BY name').all();
     const { name, email, password, confirm_password, department_id, college_id, level } = req.body;
+=======
+    const faculties = db.prepare('SELECT * FROM faculties ORDER BY name').all();
+    const { name, email, password, confirm_password, department_id, faculty_id, level } = req.body;
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 
     const result = createAccount({
       role, // hardcoded per-route — never taken from req.body
       name, email, password, confirmPassword: confirm_password,
+<<<<<<< HEAD
       departmentId: department_id, collegeId: college_id, level,
+=======
+      departmentId: department_id, facultyId: faculty_id, level,
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     });
 
     if (result.error) {
       return res.render(`auth/register-${role}`, {
+<<<<<<< HEAD
         title: `Register as ${ROLE_LABELS[role]}`, layout: false, departments, colleges,
+=======
+        title: `Register as ${ROLE_LABELS[role]}`, layout: false, departments, faculties,
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
         error: result.error, form: req.body,
       });
     }

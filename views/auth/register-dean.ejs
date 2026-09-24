@@ -54,6 +54,7 @@
         </div>
 
         <div class="mb-3">
+<<<<<<< HEAD
           <label for="college_id" class="form-label">College</label>
           <select class="form-select" id="college_id" name="college_id" required>
             <option value="">— select a college —</option>
@@ -62,6 +63,16 @@
             <% }) %>
           </select>
           <div class="form-text">If this college's Dean seat is currently open, you'll be seated as its official head automatically. If it's already filled, your account is still created with full Dean access — the registrar can reassign headship afterward.</div>
+=======
+          <label for="faculty_id" class="form-label">Faculty</label>
+          <select class="form-select" id="faculty_id" name="faculty_id" required>
+            <option value="">— select a faculty —</option>
+            <% faculties.forEach(function(f){ %>
+              <option value="<%= f.id %>" <%= String(form.faculty_id) === String(f.id) ? 'selected' : '' %>><%= f.name %></option>
+            <% }) %>
+          </select>
+          <div class="form-text">If this faculty's Dean seat is currently open, you'll be seated as its official head automatically. If it's already filled, your account is still created with full Dean access — the registrar can reassign headship afterward.</div>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
         </div>
 
         <button class="btn btn-gold w-100" type="submit"><i class="fa-solid fa-user-plus me-1"></i> Create Dean account</button>

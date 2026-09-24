@@ -12,6 +12,7 @@ const { db } = require('../config/db');
  *   6. fit_ratio = registered_count / venue.capacity
  *   7. Time slot assignment runs alongside, checking lecturer & venue
  *      availability before confirming.
+<<<<<<< HEAD
  *
  * Provisional allocation (HOD class-size estimate): with
  * { useEstimates: true }, an offering that has zero real registrations so
@@ -24,6 +25,10 @@ const { db } = require('../config/db');
  * a fresh, non-provisional allocation off the live count.
  */
 function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = false } = {}) {
+=======
+ */
+function runAllocationEngine(sessionId, { onlyOfferingId = null } = {}) {
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   const refreshCounts = db.prepare(`
     UPDATE course_offerings
     SET registered_count = (
@@ -35,7 +40,11 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = 
 
   let offeringsQuery = `
     SELECT co.id, co.course_id, co.lecturer_id, co.registered_count,
+<<<<<<< HEAD
            c.code, c.title, c.expected_class_size
+=======
+           c.code, c.title
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     FROM course_offerings co
     JOIN courses c ON c.id = co.course_id
     WHERE co.session_id = ?
@@ -45,6 +54,7 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = 
     offeringsQuery += ' AND co.id = ?';
     params.push(onlyOfferingId);
   }
+<<<<<<< HEAD
   const rawOfferings = db.prepare(offeringsQuery).all(...params);
 
   // Effective count = real registrations, falling back to the HOD's
@@ -54,6 +64,10 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = 
     const effectiveCount = o.registered_count > 0 ? o.registered_count : (isProvisional ? o.expected_class_size : 0);
     return { ...o, effectiveCount, isProvisional };
   }).sort((a, b) => b.effectiveCount - a.effectiveCount);
+=======
+  offeringsQuery += ' ORDER BY co.registered_count DESC';
+  const offerings = db.prepare(offeringsQuery).all(...params);
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 
   const venues = db.prepare('SELECT * FROM venues ORDER BY capacity DESC').all();
   const timeslots = db.prepare('SELECT * FROM timeslots').all();
@@ -80,8 +94,13 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = 
     DELETE FROM timetable_entries WHERE offering_id = ? AND status IN ('draft','shortfall')
   `);
   const insertEntry = db.prepare(`
+<<<<<<< HEAD
     INSERT INTO timetable_entries (offering_id, venue_id, timeslot_id, fit_ratio, status, is_provisional)
     VALUES (?, ?, ?, ?, ?, ?)
+=======
+    INSERT INTO timetable_entries (offering_id, venue_id, timeslot_id, fit_ratio, status)
+    VALUES (?, ?, ?, ?, ?)
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   `);
 
   const results = [];
@@ -89,11 +108,19 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = 
   for (const offering of offerings) {
     upsertEntry.run(offering.id);
 
+<<<<<<< HEAD
     if (offering.effectiveCount === 0) continue;
 
     // Smallest venue (already sorted DESC, so scan from the end forward is
     // "smallest that fits" -> iterate reversed) that still fully contains the class.
     const candidateVenues = [...venues].reverse().filter(v => v.capacity >= offering.effectiveCount);
+=======
+    if (offering.registered_count === 0) continue;
+
+    // Smallest venue (already sorted DESC, so scan from the end forward is
+    // "smallest that fits" -> iterate reversed) that still fully contains the class.
+    const candidateVenues = [...venues].reverse().filter(v => v.capacity >= offering.registered_count);
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 
     let assigned = null;
     for (const venue of candidateVenues) {
@@ -109,6 +136,7 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = 
     }
 
     if (!assigned) {
+<<<<<<< HEAD
       insertEntry.run(offering.id, null, null, null, 'shortfall', offering.isProvisional ? 1 : 0);
       results.push({ offering, status: 'shortfall', isProvisional: offering.isProvisional });
       continue;
@@ -119,6 +147,18 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = 
     venueSlotTaken.add(`${assigned.venue.id}:${assigned.slot.id}`);
     if (offering.lecturer_id) lecturerSlotTaken.add(`${offering.lecturer_id}:${assigned.slot.id}`);
     results.push({ offering, venue: assigned.venue, slot: assigned.slot, fitRatio, status: 'draft', isProvisional: offering.isProvisional });
+=======
+      insertEntry.run(offering.id, null, null, null, 'shortfall');
+      results.push({ offering, status: 'shortfall' });
+      continue;
+    }
+
+    const fitRatio = offering.registered_count / assigned.venue.capacity;
+    insertEntry.run(offering.id, assigned.venue.id, assigned.slot.id, fitRatio, 'draft');
+    venueSlotTaken.add(`${assigned.venue.id}:${assigned.slot.id}`);
+    if (offering.lecturer_id) lecturerSlotTaken.add(`${offering.lecturer_id}:${assigned.slot.id}`);
+    results.push({ offering, venue: assigned.venue, slot: assigned.slot, fitRatio, status: 'draft' });
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   }
 
   return results;

@@ -61,7 +61,11 @@ function reject(entryId, role, userId, reason) {
   logDecision(entryId, role, userId, 'rejected', reason);
 
   // Re-run allocation for just this course offering -> produces a new draft.
+<<<<<<< HEAD
   const results = runAllocationEngine(entry.session_id, { onlyOfferingId: entry.offering_id, useEstimates: true });
+=======
+  const results = runAllocationEngine(entry.session_id, { onlyOfferingId: entry.offering_id });
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   return results[0] || null;
 }
 
@@ -84,6 +88,7 @@ function handleLateChange(offeringId) {
 
   if (!currentEntry) return { changed: false, reason: 'No existing timetable entry yet.' };
 
+<<<<<<< HEAD
   // A provisional entry (allocated off the HOD's estimated class size, not
   // real registrations) gets promoted to a real allocation the moment the
   // course has its first actual registration — even if the estimate still
@@ -103,6 +108,14 @@ function handleLateChange(offeringId) {
       : 'Capacity exceeded — re-allocation triggered.',
     result: results[0] || null,
   };
+=======
+  if (currentEntry.capacity && count <= currentEntry.capacity) {
+    return { changed: false, reason: 'Published timetable left untouched — still within venue capacity.' };
+  }
+
+  const results = runAllocationEngine(offering.session_id, { onlyOfferingId: offeringId });
+  return { changed: true, reason: 'Capacity exceeded — re-allocation triggered.', result: results[0] || null };
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 }
 
 module.exports = { approve, reject, handleLateChange, getEntry, NEXT_STATUS, ROLE_FOR_STATUS };

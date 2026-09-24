@@ -1,5 +1,9 @@
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+<<<<<<< HEAD
   <div><div class="kicker">Head of Department<% if (dept && dept.college_name) { %> · <%= dept.college_name %><% } %></div><h1 class="h3 mb-0"><%= dept ? dept.name : 'Dashboard' %></h1></div>
+=======
+  <div><div class="kicker">Head of Department<% if (dept && dept.faculty_name) { %> · <%= dept.faculty_name %><% } %></div><h1 class="h3 mb-0"><%= dept ? dept.name : 'Dashboard' %></h1></div>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
 </div>
 
@@ -31,6 +35,9 @@
     <a class="btn btn-gold" href="/hod/courses"><i class="fa-solid fa-book me-1"></i> Manage courses</a>
     <a class="btn btn-outline-secondary" href="/hod/approvals"><i class="fa-solid fa-clipboard-check me-1"></i> Review approval queue</a>
     <a class="btn btn-outline-secondary" href="/hod/assign"><i class="fa-solid fa-chalkboard-user me-1"></i> Assign lecturers</a>
+<<<<<<< HEAD
     <a class="btn btn-outline-secondary" href="/hod/programmes"><i class="fa-solid fa-diagram-project me-1"></i> Programmes (<%= programmeCount %>)</a>
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   </div>
 <% } %>

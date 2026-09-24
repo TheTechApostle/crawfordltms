@@ -1,20 +1,36 @@
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+<<<<<<< HEAD
   <div><div class="kicker">Dean / Timetable Committee<% if (college) { %> · <%= college.name %><% } %></div><h1 class="h3 mb-0">Cross-department clashes</h1></div>
+=======
+  <div><div class="kicker">Dean / Timetable Committee<% if (faculty) { %> · <%= faculty.name %><% } %></div><h1 class="h3 mb-0">Cross-department clashes</h1></div>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
 </div>
 
 <div class="card"><div class="card-body">
+<<<<<<< HEAD
   <% if (!college) { %>
     <div class="text-center py-5 text-secondary">
       <i class="fa-solid fa-landmark fa-2x mb-2 d-block text-secondary"></i>
       <h3 class="h5 text-dark">No college assigned</h3>
       <p class="mb-0">Ask the registrar to set you as Dean of a college.</p>
+=======
+  <% if (!faculty) { %>
+    <div class="text-center py-5 text-secondary">
+      <i class="fa-solid fa-landmark fa-2x mb-2 d-block text-secondary"></i>
+      <h3 class="h5 text-dark">No faculty assigned</h3>
+      <p class="mb-0">Ask the registrar to set you as Dean of a faculty.</p>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     </div>
   <% } else if (!clashes.length) { %>
     <div class="text-center py-5 text-secondary">
       <i class="fa-solid fa-circle-check fa-2x mb-2 d-block text-success"></i>
       <h3 class="h5 text-dark">No clashes detected</h3>
+<<<<<<< HEAD
       <p class="mb-0">Every venue/timeslot pair in <%= college.name %> currently holds at most one course.</p>
+=======
+      <p class="mb-0">Every venue/timeslot pair in <%= faculty.name %> currently holds at most one course.</p>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     </div>
   <% } else { %>
     <div class="table-responsive"><table class="table table-hover align-middle mb-0">

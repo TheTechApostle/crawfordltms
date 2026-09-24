@@ -10,12 +10,20 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   role          TEXT NOT NULL CHECK (role IN ('admin','dean','hod','lecturer','student')),
   department_id INTEGER REFERENCES departments(id),
+<<<<<<< HEAD
   college_id    INTEGER REFERENCES colleges(id), -- a Dean's own college
+=======
+  faculty_id    INTEGER REFERENCES faculties(id), -- a Dean's own faculty
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   level         INTEGER,                 -- for students, e.g. 100/200/300/400
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+<<<<<<< HEAD
 CREATE TABLE IF NOT EXISTS colleges (
+=======
+CREATE TABLE IF NOT EXISTS faculties (
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   id       INTEGER PRIMARY KEY AUTOINCREMENT,
   name     TEXT NOT NULL UNIQUE,
   code     TEXT NOT NULL UNIQUE,
@@ -26,6 +34,7 @@ CREATE TABLE IF NOT EXISTS departments (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   name        TEXT NOT NULL UNIQUE,
   code        TEXT NOT NULL UNIQUE,
+<<<<<<< HEAD
   college_id  INTEGER REFERENCES colleges(id),
   hod_id      INTEGER REFERENCES users(id)
 );
@@ -41,6 +50,12 @@ CREATE TABLE IF NOT EXISTS programmes (
   UNIQUE(department_id, code)
 );
 
+=======
+  faculty_id  INTEGER REFERENCES faculties(id),
+  hod_id      INTEGER REFERENCES users(id)
+);
+
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 CREATE TABLE IF NOT EXISTS academic_sessions (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   name        TEXT NOT NULL UNIQUE,      -- e.g. "2025/2026 - First Semester"
@@ -50,6 +65,7 @@ CREATE TABLE IF NOT EXISTS academic_sessions (
 );
 
 CREATE TABLE IF NOT EXISTS courses (
+<<<<<<< HEAD
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
   code                  TEXT NOT NULL UNIQUE,     -- e.g. CSC313
   title                 TEXT NOT NULL,
@@ -62,6 +78,18 @@ CREATE TABLE IF NOT EXISTS courses (
                         CHECK (status IN ('pending','approved','rejected')),
   reject_reason         TEXT,
   created_by            INTEGER REFERENCES users(id) -- who proposed it (HOD) or added it directly (registrar)
+=======
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  code          TEXT NOT NULL UNIQUE,     -- e.g. CSC313
+  title         TEXT NOT NULL,
+  credit_units  INTEGER NOT NULL DEFAULT 3,
+  department_id INTEGER NOT NULL REFERENCES departments(id),
+  level         INTEGER NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'pending'
+                CHECK (status IN ('pending','approved','rejected')),
+  reject_reason TEXT,
+  created_by    INTEGER REFERENCES users(id) -- who proposed it (HOD) or added it directly (registrar)
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 );
 
 CREATE TABLE IF NOT EXISTS venues (
@@ -101,7 +129,10 @@ CREATE TABLE IF NOT EXISTS timetable_entries (
   venue_id    INTEGER REFERENCES venues(id),
   timeslot_id INTEGER REFERENCES timeslots(id),
   fit_ratio   REAL,
+<<<<<<< HEAD
   is_provisional INTEGER NOT NULL DEFAULT 0, -- allocated from expected_class_size, not real registrations yet
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   status      TEXT NOT NULL DEFAULT 'draft'
               CHECK (status IN ('draft','lecturer_ok','hod_ok','final','published','shortfall','rejected')),
   reject_reason TEXT,

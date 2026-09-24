@@ -9,7 +9,11 @@ const { db } = require('../config/db');
  *
  * Returns { error } on validation failure, or { user } on success.
  */
+<<<<<<< HEAD
 function createAccount({ role, name, email, password, confirmPassword, departmentId, collegeId, level }) {
+=======
+function createAccount({ role, name, email, password, confirmPassword, departmentId, facultyId, level }) {
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   const cleanEmail = (email || '').trim().toLowerCase();
   const cleanName = (name || '').trim();
 
@@ -28,8 +32,13 @@ function createAccount({ role, name, email, password, confirmPassword, departmen
   if (role === 'student' && !level) {
     return { error: 'Please select your level.' };
   }
+<<<<<<< HEAD
   if (role === 'dean' && !collegeId) {
     return { error: 'Please select a college.' };
+=======
+  if (role === 'dean' && !facultyId) {
+    return { error: 'Please select a faculty.' };
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   }
 
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
@@ -39,6 +48,7 @@ function createAccount({ role, name, email, password, confirmPassword, departmen
 
   const hash = bcrypt.hashSync(password, 10);
   const deptId = (role === 'student' || role === 'lecturer' || role === 'hod') ? Number(departmentId) : null;
+<<<<<<< HEAD
   const collId = role === 'dean' ? Number(collegeId) : null;
   const lvl = role === 'student' ? Number(level) : null;
 
@@ -50,6 +60,19 @@ function createAccount({ role, name, email, password, confirmPassword, departmen
 
   // If the seat is currently open, seat this new HOD/Dean as the
   // department's/college's official head — otherwise leave the existing
+=======
+  const facId = role === 'dean' ? Number(facultyId) : null;
+  const lvl = role === 'student' ? Number(level) : null;
+
+  const result = db.prepare(`
+    INSERT INTO users (name, email, password_hash, role, department_id, faculty_id, level)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(cleanName, cleanEmail, hash, role, deptId, facId, lvl);
+  const newUserId = result.lastInsertRowid;
+
+  // If the seat is currently open, seat this new HOD/Dean as the
+  // department's/faculty's official head — otherwise leave the existing
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   // designation alone and let the registrar reassign it manually later.
   if (role === 'hod') {
     const dept = db.prepare('SELECT * FROM departments WHERE id = ?').get(deptId);
@@ -58,16 +81,26 @@ function createAccount({ role, name, email, password, confirmPassword, departmen
     }
   }
   if (role === 'dean') {
+<<<<<<< HEAD
     const coll = db.prepare('SELECT * FROM colleges WHERE id = ?').get(collId);
     if (coll && !coll.dean_id) {
       db.prepare('UPDATE colleges SET dean_id = ? WHERE id = ?').run(newUserId, collId);
+=======
+    const fac = db.prepare('SELECT * FROM faculties WHERE id = ?').get(facId);
+    if (fac && !fac.dean_id) {
+      db.prepare('UPDATE faculties SET dean_id = ? WHERE id = ?').run(newUserId, facId);
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     }
   }
 
   return {
     user: {
       id: newUserId, name: cleanName, email: cleanEmail, role,
+<<<<<<< HEAD
       department_id: deptId, college_id: collId, level: lvl,
+=======
+      department_id: deptId, faculty_id: facId, level: lvl,
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     },
   };
 }

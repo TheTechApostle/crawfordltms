@@ -50,7 +50,10 @@
                             data-code="<%= e.code %>"
                             data-title="<%= e.title %>"
                             data-dept="<%= e.dept_name || '' %>"
+<<<<<<< HEAD
                             data-college="<%= e.college_name || '' %>"
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
                             data-lecturer="<%= e.lecturer_name || 'Unassigned' %>"
                             data-venue="<%= e.venue_name || '—' %>"
                             data-capacity="<%= e.capacity || '' %>"
@@ -58,9 +61,14 @@
                             data-status="<%= e.status %>"
                             data-day="<%= e.day %>"
                             data-start="<%= e.start_time %>"
+<<<<<<< HEAD
                             data-end="<%= e.end_time %>"
                             data-provisional="<%= e.is_provisional ? '1' : '' %>">
                       <%= e.code %><% if (e.is_provisional) { %><sup title="Provisional — based on estimated class size, not yet real registrations">*</sup><% } %>
+=======
+                            data-end="<%= e.end_time %>">
+                      <%= e.code %>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
                     </button>
                   <% }) %>
                 <% } %>

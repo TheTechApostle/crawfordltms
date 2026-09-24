@@ -13,6 +13,7 @@ const db = new DatabaseSync(DB_PATH);
 db.exec('PRAGMA journal_mode = WAL');
 db.exec('PRAGMA foreign_keys = ON');
 
+<<<<<<< HEAD
 function tableExists(name) {
   return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name = ?").get(name);
 }
@@ -33,10 +34,13 @@ if (tableExists('users') && hasColumn('users', 'faculty_id') && !hasColumn('user
   db.exec('ALTER TABLE users RENAME COLUMN faculty_id TO college_id');
 }
 
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 // Always (re)apply schema — CREATE TABLE IF NOT EXISTS is safe on existing DBs.
 const schema = fs.readFileSync(SCHEMA_PATH, 'utf8');
 db.exec(schema);
 
+<<<<<<< HEAD
 // Lightweight migrations: CREATE TABLE IF NOT EXISTS won't retroactively add
 // a new column to a table that already existed (e.g. a db seeded before the
 // College layer, or the Programme layer, was introduced). Patch those in for
@@ -48,6 +52,22 @@ if (!hasColumn('users', 'college_id')) {
   db.exec('ALTER TABLE users ADD COLUMN college_id INTEGER REFERENCES colleges(id)');
 }
 if (!hasColumn('courses', 'status')) {
+=======
+// Lightweight migration: CREATE TABLE IF NOT EXISTS won't retroactively add a
+// new column to a table that already existed (e.g. a db seeded before the
+// Faculty layer was introduced). Patch that in for anyone re-running against
+// an older database file instead of a fresh one.
+const departmentCols = db.prepare("PRAGMA table_info(departments)").all();
+if (!departmentCols.some(c => c.name === 'faculty_id')) {
+  db.exec('ALTER TABLE departments ADD COLUMN faculty_id INTEGER REFERENCES faculties(id)');
+}
+const userCols = db.prepare("PRAGMA table_info(users)").all();
+if (!userCols.some(c => c.name === 'faculty_id')) {
+  db.exec('ALTER TABLE users ADD COLUMN faculty_id INTEGER REFERENCES faculties(id)');
+}
+const courseCols = db.prepare("PRAGMA table_info(courses)").all();
+if (!courseCols.some(c => c.name === 'status')) {
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   db.exec("ALTER TABLE courses ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'");
   db.exec('ALTER TABLE courses ADD COLUMN reject_reason TEXT');
   db.exec('ALTER TABLE courses ADD COLUMN created_by INTEGER REFERENCES users(id)');
@@ -59,6 +79,7 @@ if (!hasColumn('courses', 'status')) {
     WHERE id IN (SELECT DISTINCT course_id FROM course_offerings)
   `);
 }
+<<<<<<< HEAD
 if (!hasColumn('courses', 'programme_id')) {
   db.exec('ALTER TABLE courses ADD COLUMN programme_id INTEGER REFERENCES programmes(id)');
 }
@@ -68,5 +89,7 @@ if (!hasColumn('courses', 'expected_class_size')) {
 if (!hasColumn('timetable_entries', 'is_provisional')) {
   db.exec('ALTER TABLE timetable_entries ADD COLUMN is_provisional INTEGER NOT NULL DEFAULT 0');
 }
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 
 module.exports = { db, isNew };

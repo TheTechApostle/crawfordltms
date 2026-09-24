@@ -5,7 +5,11 @@ proposal → Dean approval → session setup → course registration → best-fi
 venue/timeslot allocation → sequential Lecturer → HOD → Dean → Registrar
 approval → publication, with capacity-aware re-allocation on late
 add/drops. Academic structure follows the real institutional hierarchy:
+<<<<<<< HEAD
 **College → Department → Course**, with a Dean scoped to their college and
+=======
+**Faculty → Department → Course**, with a Dean scoped to their faculty and
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 an HOD scoped to their department — each enforced server-side, not just
 filtered in the UI. HODs propose and manage their department's courses,
 Deans approve them, lecturers get assigned once approved, and only then can
@@ -62,10 +66,17 @@ All demo accounts use the password **`password123`**.
 | Role | Email |
 |---|---|
 | Registrar / Academic Affairs (admin) | `admin@crawford.edu.ng` |
+<<<<<<< HEAD
 | Dean, College of Natural and Applied Sciences | `dean@crawford.edu.ng` |
 | HOD, Computer Science (College of Natural and Applied Sciences) | `hod.cs@crawford.edu.ng` |
 | HOD, Mathematics (College of Natural and Applied Sciences) | `hod.mth@crawford.edu.ng` |
 | HOD, Mechanical Engineering (College of Engineering) | `hod.mee@crawford.edu.ng` |
+=======
+| Dean, Faculty of Science | `dean@crawford.edu.ng` |
+| HOD, Computer Science (Faculty of Science) | `hod.cs@crawford.edu.ng` |
+| HOD, Mathematics (Faculty of Science) | `hod.mth@crawford.edu.ng` |
+| HOD, Mechanical Engineering (Faculty of Engineering) | `hod.mee@crawford.edu.ng` |
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 | Lecturer, Computer Science | `lecturer1@crawford.edu.ng`, `lecturer2@crawford.edu.ng` |
 | Lecturer, Mathematics | `lecturer3@crawford.edu.ng` |
 | Student (level 300) | `student1@crawford.edu.ng` … `student20@crawford.edu.ng` |
@@ -80,7 +91,11 @@ role are you" page, and no role dropdown anywhere: each link goes straight
 to its own isolated page, and the role is fixed server-side per route — a
 submitted form can't change what gets created, and a student can never end
 up on the same page (or even the same form fields) as a Dean registration.
+<<<<<<< HEAD
 The College of Engineering's Dean seat and the Physics department's HOD
+=======
+The Faculty of Engineering's Dean seat and the Physics department's HOD
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 seat are deliberately left open in the seed data — try registering as
 either to see the auto-seating behavior described below.
 
@@ -96,7 +111,11 @@ either to see the auto-seating behavior described below.
    *Courses* page, which creates the course offering the rest of this
    walk-through assumes already exists for the seeded courses.
 1. **Sign in as the registrar** (`admin@…`) → *Sessions* is already seeded with
+<<<<<<< HEAD
    an active `2025/2026 - First Semester`. *Colleges*, *Departments*, courses,
+=======
+   an active `2025/2026 - First Semester`. *Faculties*, *Departments*, courses,
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
    venues and timeslots are pre-populated too.
 2. Still as registrar, open **Allocation engine → Run allocation engine**.
    This pulls `registered_count` from enrollments, sorts course offerings
@@ -120,6 +139,7 @@ either to see the auto-seating behavior described below.
    (department-level clash check). This queue — and the approve/reject
    actions themselves — are scoped strictly to that HOD's own department;
    an HOD can't act on another department's entry even by guessing its id.
+<<<<<<< HEAD
 5. **Sign in as the dean** (`dean@…`) → *Departments* gives a college-wide
    view: every department under College of Natural and Applied Sciences with its HOD, course
    counts (approved/pending), lecturer and student counts, and how many
@@ -131,6 +151,19 @@ either to see the auto-seating behavior described below.
    queue: a dean can't approve or reject an entry from another college even
    by guessing its id. *Cross-dept. clashes* lists any venue/timeslot pair
    double-booked across departments within that college.
+=======
+5. **Sign in as the dean** (`dean@…`) → *Departments* gives a faculty-wide
+   view: every department under Faculty of Science with its HOD, course
+   counts (approved/pending), lecturer and student counts, and how many
+   courses are offered this session — plus a *Lecturers in charge* roster
+   showing every offered course across the whole faculty, who's teaching
+   it, how many are registered, and its current timetable status. Then
+   *Approval queue* → final cross-department sign-off, scoped to the
+   departments under this dean's own faculty — same protection as the HOD
+   queue: a dean can't approve or reject an entry from another faculty even
+   by guessing its id. *Cross-dept. clashes* lists any venue/timeslot pair
+   double-booked across departments within that faculty.
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 6. **Back as the registrar** → *Publish queue* → **Publish**. This is the only
    action that makes an entry visible on read-only timetables.
 7. **Sign in as a student** (`student1@…`) → *My timetable* now shows the
@@ -157,21 +190,38 @@ either to see the auto-seating behavior described below.
 - Rejected timetable entries are kept (not deleted) as an audit trail in
   `approval_log`; only draft/shortfall attempts are cleared before
   re-allocating.
+<<<<<<< HEAD
 - **College hierarchy**: `colleges` sits above `departments` (each
   department has a `college_id`), mirroring how Nigerian universities are
   actually structured. A Dean's functional scope comes from their own
   `users.college_id` — the same pattern already used for an HOD's
   `department_id`, a lecturer's `department_id`, or a student's
   `department_id`+`level`. `colleges.dean_id` and `departments.hod_id` are
+=======
+- **Faculty hierarchy**: `faculties` sits above `departments` (each
+  department has a `faculty_id`), mirroring how Nigerian universities are
+  actually structured. A Dean's functional scope comes from their own
+  `users.faculty_id` — the same pattern already used for an HOD's
+  `department_id`, a lecturer's `department_id`, or a student's
+  `department_id`+`level`. `faculties.dean_id` and `departments.hod_id` are
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   a separate, purely-cosmetic "who's the officially recognized head" pointer
   shown in the admin listings — they don't gate access on their own.
 - **Scoped approvals, enforced server-side**: both `routes/hod.js` and
   `routes/dean.js` check that a timetable entry actually belongs to the
+<<<<<<< HEAD
   approver's own department/college (`entryInDept` / `entryInCollege`)
   *before* calling `approve()`/`reject()` — not just when building the
   approval-queue listing. An HOD or Dean can't act on someone else's
   entry by guessing or iterating ids; the request is silently dropped.
   The same guard pattern (`entryInDept` / `courseInCollege`) protects course
+=======
+  approver's own department/faculty (`entryInDept` / `entryInFaculty`)
+  *before* calling `approve()`/`reject()` — not just when building the
+  approval-queue listing. An HOD or Dean can't act on someone else's
+  entry by guessing or iterating ids; the request is silently dropped.
+  The same guard pattern (`entryInDept` / `courseInFaculty`) protects course
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   create/edit/delete/approve/reject too.
 - **Course lifecycle**: `courses.status` is `pending` → `approved` (or
   `rejected`, which an HOD can edit and resubmit — back to `pending` with
@@ -185,11 +235,16 @@ either to see the auto-seating behavior described below.
   adds directly skips Dean review and goes straight to `approved` — the
   approval gate exists for HOD-originated proposals, not registrar ones.
 - **Registrar edit/delete, everywhere it matters**: every academic-structure
+<<<<<<< HEAD
   page the registrar manages — *Sessions*, *Colleges*, *Departments*,
+=======
+  page the registrar manages — *Sessions*, *Faculties*, *Departments*,
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   *Courses*, *Venues*, *Timeslots* — supports inline edit and delete, not
   just create. A delete is refused (button disabled, with a tooltip) if the
   row is still referenced elsewhere — a venue or timeslot already used in a
   timetable entry, a course already offered, a department with courses or
+<<<<<<< HEAD
   members, a college with departments, a session with offerings — so this
   can't silently orphan live data. Reassigning a College's Dean or a
   Department's HOD from these edit forms is a real change of authority, not
@@ -197,11 +252,24 @@ either to see the auto-seating behavior described below.
   is kept in sync, so their approval queue actually follows the reassignment.
   A Dean gets a narrower version of this: they can edit a still-`pending`
   course proposal in their own college (fixing a typo, say) before deciding
+=======
+  members, a faculty with departments, a session with offerings — so this
+  can't silently orphan live data. Reassigning a Faculty's Dean or a
+  Department's HOD from these edit forms is a real change of authority, not
+  just a label: the newly-picked person's own `faculty_id`/`department_id`
+  is kept in sync, so their approval queue actually follows the reassignment.
+  A Dean gets a narrower version of this: they can edit a still-`pending`
+  course proposal in their own faculty (fixing a typo, say) before deciding
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   on it, without having to reject-and-bounce it back to the HOD for
   something trivial — but, like the HOD, they lose edit rights once it's
   been decided either way.
 - **Timetable grid, click for details**: *Master timetable* (registrar),
+<<<<<<< HEAD
   *Department timetable* (HOD), and *College timetable* (Dean) all render
+=======
+  *Department timetable* (HOD), and *Faculty timetable* (Dean) all render
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   the same reusable grid (`views/partials/timetable-grid.ejs`) — time bands
   as rows, days as columns, so you can see at a glance how many classes are
   running in any slot. A cell with more than one class shows a count badge;
@@ -214,7 +282,11 @@ either to see the auto-seating behavior described below.
   layout, so every entry anywhere in the app is click-for-details
   consistently. Each grid is scoped the same way its page already is —
   university-wide for the registrar, one department for the HOD, one
+<<<<<<< HEAD
   college for the Dean — and only shows non-rejected entries that actually
+=======
+  faculty for the Dean — and only shows non-rejected entries that actually
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   have a timeslot assigned. The grid's row structure comes from the
   registrar's configured *Timeslots*, not from existing entries — so the
   full grid (all time bands × all days) is visible from day one, with cells
@@ -246,11 +318,19 @@ either to see the auto-seating behavior described below.
   could tamper with — which page you post to is the only thing that
   decides what account gets created. Each form only asks for what that
   role needs: department for lecturer/HOD, department+level for student,
+<<<<<<< HEAD
   college for dean. If the department's HOD seat or college's Dean seat is
   currently open, the new account is auto-seated into it; if it's already
   filled, the account is still created with full role access — the
   registrar can reassign the official headship afterward via
   *Departments* / *Colleges*. The Registrar account itself is never
+=======
+  faculty for dean. If the department's HOD seat or faculty's Dean seat is
+  currently open, the new account is auto-seated into it; if it's already
+  filled, the account is still created with full role access — the
+  registrar can reassign the official headship afterward via
+  *Departments* / *Faculties*. The Registrar account itself is never
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   self-registerable.
 
 ## Production notes
@@ -260,6 +340,7 @@ session store, which is fine for a single instance. For a real deployment:
 set a strong `SESSION_SECRET` in `.env`, put a persistent session store in
 front of `express-session` (e.g. `connect-sqlite3` or Redis) if you run more
 than one process, and put the app behind HTTPS.
+<<<<<<< HEAD
 
 ## Changelog — stakeholder review (Registrar / Dean / HOD / Lecturer / Student)
 
@@ -298,3 +379,5 @@ than one process, and put the app behind HTTPS.
   every venue+timeslot and lecturer+timeslot combination already taken
   before assigning a new one, so re-running it (or a lecturer flagging a
   clash) never double-books an occupied slot.
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351

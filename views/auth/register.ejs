@@ -83,6 +83,7 @@
           </select>
         </div>
 
+<<<<<<< HEAD
         <div class="mb-3 role-field role-field-college">
           <label for="college_id" class="form-label">College</label>
           <select class="form-select" id="college_id" name="college_id">
@@ -92,6 +93,17 @@
             <% }) %>
           </select>
           <div class="form-text">If a college already has a Dean, your account is still created — the registrar can reassign headship afterward.</div>
+=======
+        <div class="mb-3 role-field role-field-faculty">
+          <label for="faculty_id" class="form-label">Faculty</label>
+          <select class="form-select" id="faculty_id" name="faculty_id">
+            <option value="">— select a faculty —</option>
+            <% faculties.forEach(function(f){ %>
+              <option value="<%= f.id %>" <%= String(form.faculty_id) === String(f.id) ? 'selected' : '' %>><%= f.name %></option>
+            <% }) %>
+          </select>
+          <div class="form-text">If a faculty already has a Dean, your account is still created — the registrar can reassign headship afterward.</div>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
         </div>
 
         <button class="btn btn-gold w-100" type="submit"><i class="fa-solid fa-user-plus me-1"></i> Create account</button>
@@ -113,9 +125,15 @@
         student: ['role-field-dept', 'role-field-level'],
         lecturer: ['role-field-dept'],
         hod: ['role-field-dept'],
+<<<<<<< HEAD
         dean: ['role-field-college'],
       };
       var allFieldClasses = ['role-field-dept', 'role-field-level', 'role-field-college'];
+=======
+        dean: ['role-field-faculty'],
+      };
+      var allFieldClasses = ['role-field-dept', 'role-field-level', 'role-field-faculty'];
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 
       function applyVisibility() {
         var role = roleSelect.value;

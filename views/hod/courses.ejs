@@ -1,5 +1,9 @@
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+<<<<<<< HEAD
   <div><div class="kicker">Head of Department<% if (dept && dept.college_name) { %> · <%= dept.college_name %><% } %></div><h1 class="h3 mb-0">Courses</h1></div>
+=======
+  <div><div class="kicker">Head of Department<% if (dept && dept.faculty_name) { %> · <%= dept.faculty_name %><% } %></div><h1 class="h3 mb-0">Courses</h1></div>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
 </div>
 
@@ -9,7 +13,11 @@
 
 <div class="card mb-3"><div class="card-body">
   <h2 class="h6 card-title"><i class="fa-solid fa-plus me-1 text-secondary"></i> Propose a new course</h2>
+<<<<<<< HEAD
   <p class="text-secondary small">Goes to the Dean of <%= dept.college_name || 'your college' %> for approval before it can be offered.</p>
+=======
+  <p class="text-secondary small">Goes to the Dean of <%= dept.faculty_name || 'your faculty' %> for approval before it can be offered.</p>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   <form method="POST" action="/hod/courses">
     <div class="row g-2">
       <div class="col-md-3 mb-3"><label class="form-label">Code</label><input class="form-control" name="code" required placeholder="CSC420"></div>
@@ -17,6 +25,7 @@
       <div class="col-md-2 mb-3"><label class="form-label">Level</label><input class="form-control" name="level" type="number" required placeholder="400"></div>
       <div class="col-md-2 mb-3"><label class="form-label">Units</label><input class="form-control" name="credit_units" type="number" value="3"></div>
     </div>
+<<<<<<< HEAD
     <div class="row g-2">
       <div class="col-md-6 mb-3">
         <label class="form-label">Programme</label>
@@ -32,6 +41,8 @@
         <div class="form-text">Lets a venue/slot be drafted before students register.</div>
       </div>
     </div>
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     <button class="btn btn-gold" type="submit"><i class="fa-solid fa-paper-plane me-1"></i> Submit for approval</button>
   </form>
 </div></div>
@@ -55,7 +66,11 @@
     <% }) %>
 
     <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+<<<<<<< HEAD
       <thead><tr><th style="min-width:110px;">Code</th><th style="min-width:200px;">Title</th><th>Programme</th><th>Level</th><th>Units</th><th>Est. size</th><th>Status</th><th style="min-width:230px;"></th></tr></thead>
+=======
+      <thead><tr><th style="min-width:110px;">Code</th><th style="min-width:200px;">Title</th><th>Level</th><th>Units</th><th>Status</th><th style="min-width:230px;"></th></tr></thead>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
       <tbody>
       <% courses.forEach(function(c){ %>
         <% const editable = ['pending','rejected'].includes(c.status); %>
@@ -63,6 +78,7 @@
           <% if (editable) { %>
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="code" value="<%= c.code %>" required></td>
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="title" value="<%= c.title %>" required></td>
+<<<<<<< HEAD
             <td>
               <select form="edit-<%= c.id %>" class="form-select form-select-sm" name="programme_id">
                 <option value="">— none —</option>
@@ -72,6 +88,10 @@
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="level" type="number" value="<%= c.level %>" style="width:80px;" required></td>
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="credit_units" type="number" value="<%= c.credit_units %>" style="width:70px;"></td>
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="expected_class_size" type="number" value="<%= c.expected_class_size || '' %>" style="width:80px;" placeholder="—"></td>
+=======
+            <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="level" type="number" value="<%= c.level %>" style="width:80px;" required></td>
+            <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="credit_units" type="number" value="<%= c.credit_units %>" style="width:70px;"></td>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
             <td>
               <span class="badge badge-<%= c.status === 'rejected' ? 'rejected' : 'draft' %>"><%= c.status %></span>
               <% if (c.status === 'rejected' && c.reject_reason) { %>
@@ -85,10 +105,15 @@
           <% } else { %>
             <td class="font-monospace"><%= c.code %></td>
             <td><%= c.title %></td>
+<<<<<<< HEAD
             <td class="text-secondary small"><%= c.programme_name || '—' %></td>
             <td><%= c.level %></td>
             <td><%= c.credit_units %></td>
             <td><%= c.expected_class_size || '—' %></td>
+=======
+            <td><%= c.level %></td>
+            <td><%= c.credit_units %></td>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
             <td><span class="badge badge-published">approved</span></td>
             <td class="d-flex gap-2">
               <% if (session && !c.offered_this_session) { %>

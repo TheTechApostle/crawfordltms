@@ -7,7 +7,10 @@
       </div>
       <div class="modal-body">
         <dl class="row mb-0 small">
+<<<<<<< HEAD
           <dt class="col-5 text-secondary fw-normal">College</dt><dd class="col-7" id="cdCollege">—</dd>
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
           <dt class="col-5 text-secondary fw-normal">Department</dt><dd class="col-7" id="cdDept">—</dd>
           <dt class="col-5 text-secondary fw-normal">Lecturer</dt><dd class="col-7" id="cdLecturer">—</dd>
           <dt class="col-5 text-secondary fw-normal">Venue</dt><dd class="col-7" id="cdVenue">—</dd>
@@ -31,12 +34,19 @@
     if (!btn || !btn.dataset) return;
     var d = btn.dataset;
     document.getElementById('courseDetailModalLabel').textContent = d.code + (d.title ? ' — ' + d.title : '');
+<<<<<<< HEAD
     document.getElementById('cdCollege').textContent = d.college || '—';
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     document.getElementById('cdDept').textContent = d.dept || '—';
     document.getElementById('cdLecturer').textContent = d.lecturer || 'Unassigned';
     document.getElementById('cdVenue').textContent = d.venue || '—';
     document.getElementById('cdCapacity').textContent = d.capacity || '—';
+<<<<<<< HEAD
     document.getElementById('cdRegistered').textContent = (d.registered !== '' ? d.registered : '—') + (d.provisional ? ' (provisional — estimate)' : '');
+=======
+    document.getElementById('cdRegistered').textContent = d.registered !== '' ? d.registered : '—';
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     document.getElementById('cdTime').textContent = [d.day, [d.start, d.end].filter(Boolean).join('–')].filter(Boolean).join(' · ');
     var statusEl = document.getElementById('cdStatus');
     var label = (d.status || '').replace('_', ' ');

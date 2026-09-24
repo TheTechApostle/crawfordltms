@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
+<<<<<<< HEAD
 const bcrypt = require('bcryptjs');
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 const { db } = require('../config/db');
 const { requireRole } = require('../middleware/auth');
 const { runAllocationEngine } = require('../services/allocationEngine');
@@ -16,7 +19,11 @@ function activeSession() {
 router.get('/', (req, res) => {
   const session = activeSession();
   const counts = {
+<<<<<<< HEAD
     colleges: db.prepare('SELECT COUNT(*) c FROM colleges').get().c,
+=======
+    faculties: db.prepare('SELECT COUNT(*) c FROM faculties').get().c,
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
     departments: db.prepare('SELECT COUNT(*) c FROM departments').get().c,
     courses: db.prepare('SELECT COUNT(*) c FROM courses').get().c,
     venues: db.prepare('SELECT COUNT(*) c FROM venues').get().c,
@@ -80,6 +87,7 @@ router.post('/sessions/:id/lock', (req, res) => {
   res.redirect('/admin/sessions');
 });
 
+<<<<<<< HEAD
 // ---------- Colleges ----------
 router.get('/colleges', (req, res) => {
   const colleges = db.prepare(`
@@ -125,11 +133,59 @@ router.post('/colleges/:id/delete', (req, res) => {
     db.prepare('DELETE FROM colleges WHERE id = ?').run(req.params.id);
   }
   res.redirect('/admin/colleges');
+=======
+// ---------- Faculties ----------
+router.get('/faculties', (req, res) => {
+  const faculties = db.prepare(`
+    SELECT f.*, u.name AS dean_name,
+           (SELECT COUNT(*) FROM departments d WHERE d.faculty_id = f.id) AS dept_count
+    FROM faculties f
+    LEFT JOIN users u ON u.id = f.dean_id
+    ORDER BY f.name
+  `).all();
+  const deans = db.prepare("SELECT * FROM users WHERE role='dean'").all();
+  res.render('admin/faculties', { title: 'Faculties', faculties, deans });
+});
+
+router.post('/faculties', (req, res) => {
+  const { name, code, dean_id } = req.body;
+  const result = db.prepare('INSERT INTO faculties (name, code, dean_id) VALUES (?, ?, ?)').run(name, code, dean_id || null);
+  // Keep the Dean's own faculty_id in sync — that's what actually scopes
+  // their approval queue, not the reverse pointer on the faculty row.
+  if (dean_id) {
+    db.prepare('UPDATE users SET faculty_id = ? WHERE id = ?').run(result.lastInsertRowid, dean_id);
+  }
+  res.redirect('/admin/faculties');
+});
+
+router.post('/faculties/:id/edit', (req, res) => {
+  const { name, code, dean_id } = req.body;
+  db.prepare('UPDATE faculties SET name = ?, code = ?, dean_id = ? WHERE id = ?')
+    .run(name, code, dean_id || null, req.params.id);
+  // Reassigning the dean is a real change of authority, not just a label —
+  // keep the newly-picked dean's own faculty_id in sync so their approval
+  // queue actually follows. (A dean removed from this faculty keeps their
+  // old faculty_id until reassigned elsewhere — we never null someone's
+  // access out from under an unrelated edit.)
+  if (dean_id) {
+    db.prepare('UPDATE users SET faculty_id = ? WHERE id = ?').run(req.params.id, dean_id);
+  }
+  res.redirect('/admin/faculties');
+});
+
+router.post('/faculties/:id/delete', (req, res) => {
+  const hasDepartments = db.prepare('SELECT 1 FROM departments WHERE faculty_id = ?').get(req.params.id);
+  if (!hasDepartments) {
+    db.prepare('DELETE FROM faculties WHERE id = ?').run(req.params.id);
+  }
+  res.redirect('/admin/faculties');
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 });
 
 // ---------- Departments ----------
 router.get('/departments', (req, res) => {
   const departments = db.prepare(`
+<<<<<<< HEAD
     SELECT d.*, u.name AS hod_name, co.name AS college_name,
            (SELECT COUNT(*) FROM courses c WHERE c.department_id = d.id) AS course_count,
            (SELECT COUNT(*) FROM users du WHERE du.department_id = d.id) AS user_count,
@@ -148,14 +204,40 @@ router.post('/departments', (req, res) => {
   const { name, code, college_id, hod_id } = req.body;
   db.prepare('INSERT INTO departments (name, code, college_id, hod_id) VALUES (?, ?, ?, ?)')
     .run(name, code, college_id || null, hod_id || null);
+=======
+    SELECT d.*, u.name AS hod_name, f.name AS faculty_name,
+           (SELECT COUNT(*) FROM courses c WHERE c.department_id = d.id) AS course_count,
+           (SELECT COUNT(*) FROM users du WHERE du.department_id = d.id) AS user_count
+    FROM departments d
+    LEFT JOIN users u ON u.id = d.hod_id
+    LEFT JOIN faculties f ON f.id = d.faculty_id
+    ORDER BY d.name
+  `).all();
+  const hods = db.prepare("SELECT * FROM users WHERE role='hod'").all();
+  const faculties = db.prepare('SELECT * FROM faculties ORDER BY name').all();
+  res.render('admin/departments', { title: 'Departments', departments, hods, faculties });
+});
+
+router.post('/departments', (req, res) => {
+  const { name, code, faculty_id, hod_id } = req.body;
+  db.prepare('INSERT INTO departments (name, code, faculty_id, hod_id) VALUES (?, ?, ?, ?)')
+    .run(name, code, faculty_id || null, hod_id || null);
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   res.redirect('/admin/departments');
 });
 
 router.post('/departments/:id/edit', (req, res) => {
+<<<<<<< HEAD
   const { name, code, college_id, hod_id } = req.body;
   db.prepare('UPDATE departments SET name = ?, code = ?, college_id = ?, hod_id = ? WHERE id = ?')
     .run(name, code, college_id || null, hod_id || null, req.params.id);
   // Same reasoning as college/dean above: reassigning the HOD here is meant
+=======
+  const { name, code, faculty_id, hod_id } = req.body;
+  db.prepare('UPDATE departments SET name = ?, code = ?, faculty_id = ?, hod_id = ? WHERE id = ?')
+    .run(name, code, faculty_id || null, hod_id || null, req.params.id);
+  // Same reasoning as faculty/dean above: reassigning the HOD here is meant
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   // to actually hand them the department's approval queue, so keep the
   // newly-picked HOD's own department_id in sync.
   if (hod_id) {
@@ -168,14 +250,19 @@ router.post('/departments/:id/delete', (req, res) => {
   const inUse = db.prepare(`
     SELECT 1 WHERE EXISTS (SELECT 1 FROM courses WHERE department_id = ?)
        OR EXISTS (SELECT 1 FROM users WHERE department_id = ?)
+<<<<<<< HEAD
        OR EXISTS (SELECT 1 FROM programmes WHERE department_id = ?)
   `).get(req.params.id, req.params.id, req.params.id);
+=======
+  `).get(req.params.id, req.params.id);
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   if (!inUse) {
     db.prepare('DELETE FROM departments WHERE id = ?').run(req.params.id);
   }
   res.redirect('/admin/departments');
 });
 
+<<<<<<< HEAD
 // ---------- Programmes ----------
 router.get('/programmes', (req, res) => {
   const programmes = db.prepare(`
@@ -212,10 +299,13 @@ router.post('/programmes/:id/delete', (req, res) => {
   res.redirect('/admin/programmes');
 });
 
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 // ---------- Courses ----------
 router.get('/courses', (req, res) => {
   const session = activeSession();
   const courses = db.prepare(`
+<<<<<<< HEAD
     SELECT c.*, d.name AS dept_name, p.name AS programme_name,
            (SELECT COUNT(*) FROM course_offerings co WHERE co.course_id = c.id) AS offering_count
     FROM courses c
@@ -225,6 +315,13 @@ router.get('/courses', (req, res) => {
   `).all();
   const departments = db.prepare('SELECT * FROM departments ORDER BY name').all();
   const programmes = db.prepare('SELECT * FROM programmes ORDER BY name').all();
+=======
+    SELECT c.*, d.name AS dept_name,
+           (SELECT COUNT(*) FROM course_offerings co WHERE co.course_id = c.id) AS offering_count
+    FROM courses c JOIN departments d ON d.id = c.department_id ORDER BY c.code
+  `).all();
+  const departments = db.prepare('SELECT * FROM departments ORDER BY name').all();
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   let offerings = [];
   if (session) {
     offerings = db.prepare(`
@@ -234,6 +331,7 @@ router.get('/courses', (req, res) => {
       WHERE co.session_id = ?
     `).all(session.id);
   }
+<<<<<<< HEAD
   res.render('admin/courses', { title: 'Courses', courses, departments, programmes, session, offerings });
 });
 
@@ -245,15 +343,34 @@ router.post('/courses', (req, res) => {
     INSERT INTO courses (code, title, credit_units, department_id, programme_id, level, expected_class_size, status, created_by)
     VALUES (?,?,?,?,?,?,?,'approved',?)
   `).run(code, title, credit_units || 3, department_id, programme_id || null, level, expected_class_size || null, req.session.user.id);
+=======
+  res.render('admin/courses', { title: 'Courses', courses, departments, session, offerings });
+});
+
+router.post('/courses', (req, res) => {
+  const { code, title, credit_units, department_id, level } = req.body;
+  // The registrar has full authority — a course they add goes straight to
+  // 'approved', skipping the Dean review that an HOD-proposed course needs.
+  db.prepare(`
+    INSERT INTO courses (code, title, credit_units, department_id, level, status, created_by)
+    VALUES (?,?,?,?,?,'approved',?)
+  `).run(code, title, credit_units || 3, department_id, level, req.session.user.id);
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   res.redirect('/admin/courses');
 });
 
 router.post('/courses/:id/edit', (req, res) => {
+<<<<<<< HEAD
   const { code, title, credit_units, department_id, programme_id, level, expected_class_size } = req.body;
   db.prepare(`
     UPDATE courses SET code = ?, title = ?, credit_units = ?, department_id = ?, programme_id = ?, level = ?, expected_class_size = ?
     WHERE id = ?
   `).run(code, title, credit_units || 3, department_id, programme_id || null, level, expected_class_size || null, req.params.id);
+=======
+  const { code, title, credit_units, department_id, level } = req.body;
+  db.prepare('UPDATE courses SET code = ?, title = ?, credit_units = ?, department_id = ?, level = ? WHERE id = ?')
+    .run(code, title, credit_units || 3, department_id, level, req.params.id);
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   res.redirect('/admin/courses');
 });
 
@@ -372,6 +489,7 @@ router.get('/allocation', (req, res) => {
 
 router.post('/allocation/run', (req, res) => {
   const session = activeSession();
+<<<<<<< HEAD
   // Real registrations take priority: a course with actual enrollments this
   // session ignores the HOD's estimate and runs on the live count as usual.
   // Anything with zero registrations so far but an HOD-supplied
@@ -381,10 +499,14 @@ router.post('/allocation/run', (req, res) => {
   // clearly flagged (is_provisional) and get swept aside automatically the
   // moment real registrations come in for that course.
   if (session) runAllocationEngine(session.id, { useEstimates: true });
+=======
+  if (session) runAllocationEngine(session.id);
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   res.redirect('/admin/allocation');
 });
 
 // ---------- Publish queue (registrar final action) ----------
+<<<<<<< HEAD
 // ---------- Master timetable grid (university-wide, filterable) ----------
 router.get('/timetable', (req, res) => {
   const session = activeSession();
@@ -397,17 +519,31 @@ router.get('/timetable', (req, res) => {
   if (session) {
     let sql = `
       SELECT te.*, c.code, c.title, d.name AS dept_name, co2.name AS college_name,
+=======
+// ---------- Master timetable grid (university-wide) ----------
+router.get('/timetable', (req, res) => {
+  const session = activeSession();
+  const bands = db.prepare('SELECT DISTINCT start_time, end_time FROM timeslots ORDER BY start_time').all();
+  let entries = [];
+  if (session) {
+    entries = db.prepare(`
+      SELECT te.*, c.code, c.title, d.name AS dept_name,
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
              u.name AS lecturer_name, v.name AS venue_name, v.capacity,
              ts.day, ts.start_time, ts.end_time, co.registered_count
       FROM timetable_entries te
       JOIN course_offerings co ON co.id = te.offering_id
       JOIN courses c ON c.id = co.course_id
       JOIN departments d ON d.id = c.department_id
+<<<<<<< HEAD
       LEFT JOIN colleges co2 ON co2.id = d.college_id
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
       LEFT JOIN users u ON u.id = co.lecturer_id
       LEFT JOIN venues v ON v.id = te.venue_id
       LEFT JOIN timeslots ts ON ts.id = te.timeslot_id
       WHERE co.session_id = ? AND te.status != 'rejected' AND te.timeslot_id IS NOT NULL
+<<<<<<< HEAD
     `;
     const params = [session.id];
     if (departmentId) {
@@ -421,6 +557,12 @@ router.get('/timetable', (req, res) => {
     entries = db.prepare(sql).all(...params);
   }
   res.render('admin/timetable', { title: 'Master timetable', session, entries, bands, colleges, departments, collegeId, departmentId });
+=======
+      ORDER BY c.code
+    `).all(session.id);
+  }
+  res.render('admin/timetable', { title: 'Master timetable', session, entries, bands });
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 });
 
 router.get('/publish', (req, res) => {
@@ -447,6 +589,7 @@ router.post('/publish/:entryId', (req, res) => {
   res.redirect('/admin/publish');
 });
 
+<<<<<<< HEAD
 // ---------- Students: bulk import ----------
 // Admin/Registrar can bulk-create student accounts from a pasted CSV
 // (name,email,department_code,level[,password]) alongside normal
@@ -517,4 +660,6 @@ router.post('/students/:id/delete', (req, res) => {
   res.redirect('/admin/students');
 });
 
+=======
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
 module.exports = router;

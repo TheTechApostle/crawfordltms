@@ -1,12 +1,22 @@
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+<<<<<<< HEAD
   <div><div class="kicker">Dean / Timetable Committee<% if (college) { %> · <%= college.name %><% } %></div><h1 class="h3 mb-0">Approval queue</h1></div>
+=======
+  <div><div class="kicker">Dean / Timetable Committee<% if (faculty) { %> · <%= faculty.name %><% } %></div><h1 class="h3 mb-0">Approval queue</h1></div>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
 </div>
 
 <div class="card"><div class="card-body">
+<<<<<<< HEAD
   <p class="text-secondary">Final approval across all departments in the college. Cross-check shared venues and electives before signing off — the registrar publishes once you approve.</p>
   <% if (!college) { %>
     <p class="text-secondary mb-0">No college assigned to your account yet — ask the registrar to set you as Dean of a college.</p>
+=======
+  <p class="text-secondary">Final approval across all departments in the faculty. Cross-check shared venues and electives before signing off — the registrar publishes once you approve.</p>
+  <% if (!faculty) { %>
+    <p class="text-secondary mb-0">No faculty assigned to your account yet — ask the registrar to set you as Dean of a faculty.</p>
+>>>>>>> 69af3544f270fdcb7c21091b20e0cad4d282d351
   <% } else if (!entries.length) { %>
     <p class="text-secondary mb-0">Nothing awaiting final approval right now.</p>
   <% } else { %>
