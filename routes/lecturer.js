@@ -150,9 +150,26 @@ router.get('/courses/:offeringId/schedule', (req, res) => {
       message: 'This course has already moved past the draft stage — it can no longer be rescheduled from here.',
     });
   }
-  const { offering: freshOffering, options, shortfall } = getAvailableSlotsForOffering(offering.id);
+  const { offering: freshOffering, options, shortfall, isProvisional, estimateSource, effectiveCount } = getAvailableSlotsForOffering(offering.id);
   offering.registered_count = freshOffering.registered_count; // recomputed from live enrollments, not the possibly-stale cached count
-  res.render('lecturer/schedule', { title: 'Set timetable · ' + offering.code, offering, options, shortfall });
+  res.render('lecturer/schedule', { title: 'Set timetable · ' + offering.code, offering, options, shortfall, isProvisional, estimateSource, effectiveCount });
+});
+
+// A lecturer's own guess at how many students to expect this session —
+// separate from (and takes priority over) the HOD's course-level estimate,
+// so they aren't stuck waiting on either the HOD or on registration
+// finishing before fixing their own lecture's time and venue. Can be set
+// or corrected any time up to the draft stage.
+router.post('/courses/:offeringId/estimate', (req, res) => {
+  const offering = db.prepare('SELECT * FROM course_offerings WHERE id = ? AND lecturer_id = ?')
+    .get(req.params.offeringId, req.session.user.id);
+  if (!offering) {
+    return res.status(404).render('error', { title: 'Not found', message: 'That course offering was not found.' });
+  }
+  const raw = (req.body.lecturer_estimate || '').trim();
+  const value = raw === '' ? null : Math.max(1, parseInt(raw, 10) || 0) || null;
+  db.prepare('UPDATE course_offerings SET lecturer_estimate = ? WHERE id = ?').run(value, offering.id);
+  res.redirect(`/lecturer/courses/${offering.id}/schedule`);
 });
 
 router.post('/courses/:offeringId/schedule', (req, res) => {
@@ -177,7 +194,7 @@ router.post('/courses/:offeringId/schedule', (req, res) => {
   // This is what actually enforces "no oversized venue for a small class":
   // the option list only ever contains the smallest sufficient free venue
   // per slot, so there is nothing else the lecturer could even submit.
-  const { options } = getAvailableSlotsForOffering(offering.id);
+  const { options, isProvisional } = getAvailableSlotsForOffering(offering.id);
   const chosen = options.find(o => String(o.slot.id) === String(req.body.timeslot_id));
   if (!chosen) {
     return res.render('error', {
@@ -189,9 +206,9 @@ router.post('/courses/:offeringId/schedule', (req, res) => {
   db.prepare(`DELETE FROM timetable_entries WHERE offering_id = ? AND status IN ('draft','shortfall','rejected')`)
     .run(offering.id);
   const result = db.prepare(`
-    INSERT INTO timetable_entries (offering_id, venue_id, timeslot_id, fit_ratio, status)
-    VALUES (?, ?, ?, ?, 'lecturer_ok')
-  `).run(offering.id, chosen.venue.id, chosen.slot.id, chosen.fitRatio);
+    INSERT INTO timetable_entries (offering_id, venue_id, timeslot_id, fit_ratio, status, is_provisional)
+    VALUES (?, ?, ?, ?, 'lecturer_ok', ?)
+  `).run(offering.id, chosen.venue.id, chosen.slot.id, chosen.fitRatio, isProvisional ? 1 : 0);
   db.prepare(`
     INSERT INTO approval_log (entry_id, approver_role, approver_id, decision, reason)
     VALUES (?, 'lecturer', ?, 'accepted', 'Self-scheduled by lecturer')

@@ -84,6 +84,10 @@ CREATE TABLE IF NOT EXISTS course_offerings (
   lecturer_id      INTEGER REFERENCES users(id),
   session_id       INTEGER NOT NULL REFERENCES academic_sessions(id),
   registered_count INTEGER NOT NULL DEFAULT 0,
+  lecturer_estimate INTEGER,  -- lecturer's own guess for THIS session, so they
+                              -- aren't stuck waiting on the HOD's course-level
+                              -- estimate (or on registration finishing) before
+                              -- fixing their own lecture's time/venue
   UNIQUE(course_id, session_id)
 );
 

@@ -8,8 +8,8 @@
 <% } else { %>
   <div class="card mb-3"><div class="card-body">
     <h2 class="h6 card-title"><i class="fa-solid fa-gears me-1 text-secondary"></i> Best-Fit Decreasing allocation</h2>
-    <p class="text-secondary">Sorts course offerings by registered students (largest first), sorts venues by capacity (largest first), then assigns each course the smallest venue that still fits it — checking lecturer and venue availability for the timeslot before confirming. Courses that don't fit any venue are flagged as a shortfall for manual review.</p>
-    <p class="text-secondary small mb-3"><i class="fa-solid fa-circle-info me-1"></i> A course with no registrations yet but an HOD-supplied estimated class size gets a <strong>provisional</strong> slot off that estimate, marked <span class="badge badge-draft">provisional</span> below — it's automatically replaced with a real allocation the moment the course gets its first actual registration.</p>
+    <p class="text-secondary">Sorts course offerings by registered students (largest first), sorts venues by capacity (largest first), then assigns each course the smallest venue that still fits it — checking lecturer and venue availability for the timeslot before confirming. Courses that don't fit any venue are flagged as a shortfall for manual review. This only ever runs off real registered students — a course with nobody registered yet is simply skipped here.</p>
+    <p class="text-secondary small mb-3"><i class="fa-solid fa-circle-info me-1"></i> A course's estimated class size (set by the HOD at course creation) isn't used by this engine — it's there so the assigned <strong>lecturer</strong> can fix their own lecture's time and venue before registration closes, from their own "Set timetable" page. Any slot set that way is marked <span class="badge badge-draft">provisional</span> below, and is automatically replaced with a real allocation the moment the course gets its first actual registration.</p>
     <form method="POST" action="/admin/allocation/run">
       <button class="btn btn-gold" type="submit"><i class="fa-solid fa-play me-1"></i> Run allocation engine</button>
     </form>

@@ -161,8 +161,10 @@ function run() {
   console.log('The registrar can also bulk-import students from Students -> Import.');
   console.log('CSC420 (Machine Learning) is seeded as a pending course proposal, with an');
   console.log('expected class size of 45 — sign in as dean@crawford.edu.ng and open Course');
-  console.log('approvals to try it, then offer it and run the allocation engine to see a');
-  console.log('provisional (estimate-based) slot appear before any student has registered.');
+  console.log('approvals to approve it, then as hod.cs@crawford.edu.ng offer it and assign');
+  console.log('it to a lecturer. Signed in as that lecturer, "Set timetable" will offer a');
+  console.log('provisional slot straight away (from the estimate), before any student has');
+  console.log('registered — and the lecturer can override the estimate with their own number.');
 }
 
 run();

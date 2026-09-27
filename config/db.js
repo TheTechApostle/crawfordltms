@@ -68,5 +68,8 @@ if (!hasColumn('courses', 'expected_class_size')) {
 if (!hasColumn('timetable_entries', 'is_provisional')) {
   db.exec('ALTER TABLE timetable_entries ADD COLUMN is_provisional INTEGER NOT NULL DEFAULT 0');
 }
+if (!hasColumn('course_offerings', 'lecturer_estimate')) {
+  db.exec('ALTER TABLE course_offerings ADD COLUMN lecturer_estimate INTEGER');
+}
 
 module.exports = { db, isNew };

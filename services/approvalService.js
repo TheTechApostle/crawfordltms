@@ -61,7 +61,11 @@ function reject(entryId, role, userId, reason) {
   logDecision(entryId, role, userId, 'rejected', reason);
 
   // Re-run allocation for just this course offering -> produces a new draft.
-  const results = runAllocationEngine(entry.session_id, { onlyOfferingId: entry.offering_id, useEstimates: true });
+  // Runs off real registered_count only (see allocationEngine.js) — if
+  // nobody's registered yet, this simply clears the slot and the lecturer
+  // goes back to /lecturer/courses/:id/schedule to pick a new one, which
+  // still has their expected_class_size estimate available to it.
+  const results = runAllocationEngine(entry.session_id, { onlyOfferingId: entry.offering_id });
   return results[0] || null;
 }
 
@@ -84,18 +88,41 @@ function handleLateChange(offeringId) {
 
   if (!currentEntry) return { changed: false, reason: 'No existing timetable entry yet.' };
 
-  // A provisional entry (allocated off the HOD's estimated class size, not
-  // real registrations) gets promoted to a real allocation the moment the
-  // course has its first actual registration — even if the estimate still
-  // technically fits — so nothing stays flagged "provisional" once live
-  // data exists to allocate against instead.
+  // A provisional entry (the lecturer self-scheduled off the HOD's estimated
+  // class size, before any real registration existed) gets promoted to a
+  // real allocation the moment the course has its first actual
+  // registration — even if the estimate still technically fits — so
+  // nothing stays flagged "provisional" once live data exists to allocate
+  // against instead.
   const justWentLive = currentEntry.is_provisional && count > 0;
 
   if (!justWentLive && currentEntry.capacity && count <= currentEntry.capacity) {
     return { changed: false, reason: 'Published timetable left untouched — still within venue capacity.' };
   }
 
-  const results = runAllocationEngine(offering.session_id, { onlyOfferingId: offeringId, useEstimates: true });
+  // The current entry may already be past the draft stage (lecturer_ok,
+  // hod_ok, even final/published) when this fires — runAllocationEngine
+  // only ever clears 'draft'/'shortfall' rows before inserting a fresh one,
+  // so an entry further along than that has to be explicitly superseded
+  // here first. Otherwise it's left behind as a stale duplicate that (for
+  // 'lecturer_ok'/'hod_ok') would keep sitting in someone's approval queue
+  // alongside the new draft, or (for 'final'/'published') would leave a
+  // dead entry no one is looking at while the real one starts back at
+  // square one.
+  if (!['draft', 'shortfall'].includes(currentEntry.status)) {
+    db.prepare(`
+      UPDATE timetable_entries SET status = 'rejected', reject_reason = ?, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(
+      justWentLive
+        ? 'Superseded — replaced by a real allocation once registration began.'
+        : 'Superseded — re-allocated after registered count exceeded venue capacity.',
+      currentEntry.id
+    );
+    logDecision(currentEntry.id, 'admin', null, 'rejected', 'Automatically superseded by re-allocation');
+  }
+
+  const results = runAllocationEngine(offering.session_id, { onlyOfferingId: offeringId });
   return {
     changed: true,
     reason: justWentLive

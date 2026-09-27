@@ -13,17 +13,16 @@ const { db } = require('../config/db');
  *   7. Time slot assignment runs alongside, checking lecturer & venue
  *      availability before confirming.
  *
- * Provisional allocation (HOD class-size estimate): with
- * { useEstimates: true }, an offering that has zero real registrations so
- * far but a `courses.expected_class_size` HODs supplied at course creation
- * is allocated against that estimate instead of sitting idle — the venue
- * and draft timetable exist immediately rather than everything being
- * gated on every student having registered first. Such entries are marked
- * `is_provisional = 1` so they're visibly distinguishable, and the moment
- * the course gets its first real registration, `handleLateChange()` forces
- * a fresh, non-provisional allocation off the live count.
+ * This always runs off real registered_count only — the HOD's
+ * expected_class_size estimate is deliberately NOT used here. That estimate
+ * exists for a lecturer fixing their own lecture (see
+ * getAvailableSlotsForOffering below), not for the Registrar's
+ * university-wide automatic run: an estimate is one department's guess, and
+ * letting it silently drive a slot/venue assignment across the whole
+ * timetable before any lecturer has actually looked at it isn't something
+ * the HOD needs, or should be able to trigger, from here.
  */
-function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = false } = {}) {
+function runAllocationEngine(sessionId, { onlyOfferingId = null } = {}) {
   const refreshCounts = db.prepare(`
     UPDATE course_offerings
     SET registered_count = (
@@ -34,8 +33,7 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = 
   refreshCounts.run(sessionId);
 
   let offeringsQuery = `
-    SELECT co.id, co.course_id, co.lecturer_id, co.registered_count,
-           c.code, c.title, c.expected_class_size
+    SELECT co.id, co.course_id, co.lecturer_id, co.registered_count, c.code, c.title
     FROM course_offerings co
     JOIN courses c ON c.id = co.course_id
     WHERE co.session_id = ?
@@ -45,15 +43,8 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = 
     offeringsQuery += ' AND co.id = ?';
     params.push(onlyOfferingId);
   }
-  const rawOfferings = db.prepare(offeringsQuery).all(...params);
-
-  // Effective count = real registrations, falling back to the HOD's
-  // estimate (only when useEstimates is on and nobody's registered yet).
-  const offerings = rawOfferings.map(o => {
-    const isProvisional = useEstimates && o.registered_count === 0 && !!o.expected_class_size;
-    const effectiveCount = o.registered_count > 0 ? o.registered_count : (isProvisional ? o.expected_class_size : 0);
-    return { ...o, effectiveCount, isProvisional };
-  }).sort((a, b) => b.effectiveCount - a.effectiveCount);
+  const offerings = db.prepare(offeringsQuery).all(...params)
+    .sort((a, b) => b.registered_count - a.registered_count);
 
   const venues = db.prepare('SELECT * FROM venues ORDER BY capacity DESC').all();
   const timeslots = db.prepare('SELECT * FROM timeslots').all();
@@ -80,8 +71,8 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = 
     DELETE FROM timetable_entries WHERE offering_id = ? AND status IN ('draft','shortfall')
   `);
   const insertEntry = db.prepare(`
-    INSERT INTO timetable_entries (offering_id, venue_id, timeslot_id, fit_ratio, status, is_provisional)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO timetable_entries (offering_id, venue_id, timeslot_id, fit_ratio, status)
+    VALUES (?, ?, ?, ?, ?)
   `);
 
   const results = [];
@@ -89,11 +80,11 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = 
   for (const offering of offerings) {
     upsertEntry.run(offering.id);
 
-    if (offering.effectiveCount === 0) continue;
+    if (offering.registered_count === 0) continue;
 
     // Smallest venue (already sorted DESC, so scan from the end forward is
     // "smallest that fits" -> iterate reversed) that still fully contains the class.
-    const candidateVenues = [...venues].reverse().filter(v => v.capacity >= offering.effectiveCount);
+    const candidateVenues = [...venues].reverse().filter(v => v.capacity >= offering.registered_count);
 
     let assigned = null;
     for (const venue of candidateVenues) {
@@ -109,16 +100,16 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = 
     }
 
     if (!assigned) {
-      insertEntry.run(offering.id, null, null, null, 'shortfall', offering.isProvisional ? 1 : 0);
-      results.push({ offering, status: 'shortfall', isProvisional: offering.isProvisional });
+      insertEntry.run(offering.id, null, null, null, 'shortfall');
+      results.push({ offering, status: 'shortfall' });
       continue;
     }
 
-    const fitRatio = offering.effectiveCount / assigned.venue.capacity;
-    insertEntry.run(offering.id, assigned.venue.id, assigned.slot.id, fitRatio, 'draft', offering.isProvisional ? 1 : 0);
+    const fitRatio = offering.registered_count / assigned.venue.capacity;
+    insertEntry.run(offering.id, assigned.venue.id, assigned.slot.id, fitRatio, 'draft');
     venueSlotTaken.add(`${assigned.venue.id}:${assigned.slot.id}`);
     if (offering.lecturer_id) lecturerSlotTaken.add(`${offering.lecturer_id}:${assigned.slot.id}`);
-    results.push({ offering, venue: assigned.venue, slot: assigned.slot, fitRatio, status: 'draft', isProvisional: offering.isProvisional });
+    results.push({ offering, venue: assigned.venue, slot: assigned.slot, fitRatio, status: 'draft' });
   }
 
   return results;
@@ -129,18 +120,35 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null, useEstimates = 
  * right now — used by the lecturer's own "set my timetable" flow. A
  * timeslot only counts as available when:
  *   - the lecturer isn't already teaching something else in that slot, and
- *   - at least one venue big enough for the class (capacity >= registered
- *     count) is free in that slot.
+ *   - at least one venue big enough for the class is free in that slot.
  * For each available slot we return the *smallest* such venue (best fit) —
  * the lecturer never gets offered a 200-seat hall for a class of 5 when a
  * 20-seat room is sitting free at the same time.
+ *
+ * Sizing, in priority order:
+ *   1. Real registered_count, whenever at least one student has registered.
+ *   2. The lecturer's own estimate for this offering/session
+ *      (course_offerings.lecturer_estimate) — theirs to set or correct
+ *      any time from the "Set timetable" page, since they're often in a
+ *      better position than the HOD's course-level guess to know roughly
+ *      how many students to expect this particular session.
+ *   3. The HOD's course-level estimate (courses.expected_class_size), set
+ *      once when the course was created, as a fallback if the lecturer
+ *      hasn't given their own number yet.
+ * Whenever (2) or (3) is what's actually being used (i.e. still nobody
+ * really registered), the result is flagged `isProvisional` — and gets
+ * silently replaced with a real allocation the moment the course gets its
+ * first actual registration (see handleLateChange in approvalService.js).
  */
 function getAvailableSlotsForOffering(offeringId) {
   const offering = db.prepare(`
-    SELECT co.id, co.course_id, co.lecturer_id, co.session_id, co.registered_count
-    FROM course_offerings co WHERE co.id = ?
+    SELECT co.id, co.course_id, co.lecturer_id, co.session_id, co.registered_count, co.lecturer_estimate,
+           c.expected_class_size
+    FROM course_offerings co
+    JOIN courses c ON c.id = co.course_id
+    WHERE co.id = ?
   `).get(offeringId);
-  if (!offering) return { offering: null, options: [], shortfall: false };
+  if (!offering) return { offering: null, options: [], shortfall: false, isProvisional: false, estimateSource: null };
 
   // Keep the registered count fresh — a student could have registered or
   // dropped since the last time anything ran.
@@ -148,11 +156,26 @@ function getAvailableSlotsForOffering(offeringId) {
   db.prepare('UPDATE course_offerings SET registered_count = ? WHERE id = ?').run(freshCount, offeringId);
   offering.registered_count = freshCount;
 
+  let effectiveCount = freshCount;
+  let estimateSource = null;
+  if (freshCount === 0) {
+    if (offering.lecturer_estimate) {
+      effectiveCount = offering.lecturer_estimate;
+      estimateSource = 'lecturer';
+    } else if (offering.expected_class_size) {
+      effectiveCount = offering.expected_class_size;
+      estimateSource = 'hod';
+    } else {
+      effectiveCount = 0;
+    }
+  }
+  const isProvisional = estimateSource !== null;
+
   const venues = db.prepare('SELECT * FROM venues ORDER BY capacity ASC').all();
   const timeslots = db.prepare('SELECT * FROM timeslots ORDER BY day, start_time').all();
 
-  const fittingVenues = venues.filter(v => v.capacity >= offering.registered_count);
-  const shortfall = offering.registered_count > 0 && fittingVenues.length === 0;
+  const fittingVenues = venues.filter(v => v.capacity >= effectiveCount);
+  const shortfall = effectiveCount > 0 && fittingVenues.length === 0;
 
   const taken = db.prepare(`
     SELECT te.venue_id, te.timeslot_id, co.lecturer_id
@@ -164,18 +187,18 @@ function getAvailableSlotsForOffering(offeringId) {
   const lecturerSlotTaken = new Set(taken.map(t => `${t.lecturer_id}:${t.timeslot_id}`));
 
   const options = [];
-  if (offering.registered_count > 0 && !shortfall) {
+  if (effectiveCount > 0 && !shortfall) {
     for (const slot of timeslots) {
       if (offering.lecturer_id && lecturerSlotTaken.has(`${offering.lecturer_id}:${slot.id}`)) continue;
       // fittingVenues is ascending by capacity, so the first free one here
       // is the best (smallest sufficient) fit for this slot.
       const venue = fittingVenues.find(v => !venueSlotTaken.has(`${v.id}:${slot.id}`));
       if (!venue) continue;
-      options.push({ slot, venue, fitRatio: offering.registered_count / venue.capacity });
+      options.push({ slot, venue, fitRatio: effectiveCount / venue.capacity });
     }
   }
 
-  return { offering, options, shortfall };
+  return { offering, options, shortfall, isProvisional, estimateSource, effectiveCount };
 }
 
 module.exports = { runAllocationEngine, getAvailableSlotsForOffering };
