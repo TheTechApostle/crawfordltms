@@ -1,0 +1,77 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Academic structure</div><h1 class="h3 mb-0">Bulk upload courses</h1></div>
+  <a class="btn btn-outline-secondary" href="/admin/courses"><i class="fa-solid fa-arrow-left me-1"></i> Back to courses</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-file-arrow-up me-1 text-secondary"></i> Upload a CSV or paste rows</h2>
+      <p class="text-secondary small">One course per row. Courses uploaded here are approved straight away, like any course you add as registrar.</p>
+      <form method="POST" action="/admin/courses/import">
+        <div class="mb-3">
+          <label class="form-label" for="csvfile">CSV file</label>
+          <input class="form-control" type="file" id="csvfile" accept=".csv,text/csv,text/plain">
+          <div class="form-text">Picking a file loads its rows into the box below so you can check them before importing.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="csv">Rows</label>
+          <textarea class="form-control font-monospace" id="csv" name="csv" rows="12" required
+            placeholder="code,title,level,credit_units,department_code,programme_code,expected_class_size,also_offered_by&#10;CSC313,Operations Research,300,3,CSC,CS,60,&#10;GST201,General Studies II,200,2,CSC,CS,300,CSC:ICT|MEE:MEE"><%= csv %></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label d-block">If a course code already exists</label>
+          <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="mode" id="m_skip" value="skip" <%= mode !== 'update' ? 'checked' : '' %>><label class="form-check-label" for="m_skip">Skip it</label></div>
+          <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="mode" id="m_upd" value="update" <%= mode === 'update' ? 'checked' : '' %>><label class="form-check-label" for="m_upd">Update it (title, level, units, department, programmes)</label></div>
+        </div>
+        <button class="btn btn-gold" type="submit"><i class="fa-solid fa-file-import me-1"></i> Import courses</button>
+        <a class="btn btn-outline-secondary" href="/admin/courses/template.csv"><i class="fa-solid fa-download me-1"></i> Download template</a>
+      </form>
+
+      <% if (result) { %>
+        <hr>
+        <p class="mb-2">
+          <span class="badge badge-published"><%= result.created.length %> created</span>
+          <% if (result.updated.length) { %><span class="badge badge-final"><%= result.updated.length %> updated</span><% } %>
+          <% if (result.skipped.length) { %><span class="badge badge-draft"><%= result.skipped.length %> skipped</span><% } %>
+          <% if (result.errors.length) { %><span class="badge badge-rejected"><%= result.errors.length %> with problems</span><% } %>
+        </p>
+        <% if (result.errors.length) { %>
+          <p class="small fw-medium mb-1">These rows were not imported — fix them and upload again (rows already imported will just be skipped):</p>
+          <ul class="small text-secondary"><% result.errors.forEach(function(e){ %><li><%= e %></li><% }) %></ul>
+        <% } %>
+        <% if (result.skipped.length) { %><p class="small text-secondary mb-0">Skipped: <%= result.skipped.join('; ') %></p><% } %>
+      <% } %>
+    </div></div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-table-list me-1 text-secondary"></i> Columns</h2>
+      <table class="table table-sm small">
+        <tbody>
+          <tr><td class="font-monospace">code</td><td>Course code, e.g. <code>CSC313</code> — must be unique. <em>Required.</em></td></tr>
+          <tr><td class="font-monospace">title</td><td><em>Required.</em></td></tr>
+          <tr><td class="font-monospace">level</td><td>100, 200, 300… <em>Required.</em></td></tr>
+          <tr><td class="font-monospace">credit_units</td><td>Defaults to 3.</td></tr>
+          <tr><td class="font-monospace">department_code</td><td>The <strong>owning</strong> department's code (see below). <em>Required.</em> That department proposes the course and allocates its lecturer.</td></tr>
+          <tr><td class="font-monospace">programme_code</td><td>Optional home programme within that department.</td></tr>
+          <tr><td class="font-monospace">expected_class_size</td><td>Optional.</td></tr>
+          <tr><td class="font-monospace">also_offered_by</td><td>Optional. <strong>Courses shared by several programmes or colleges:</strong> list the other programmes as <code>DEPT:PROG</code>, separated by <code>|</code>, e.g. <code>MEE:MEE|CSC:ICT</code>. Put the cell in quotes if you use a comma.</td></tr>
+        </tbody>
+      </table>
+      <p class="small fw-medium mb-1">Department codes</p>
+      <p class="small text-secondary">Programme codes are written <code>DEPT:PROG</code> — pick them from the Programmes page (department code + programme code).</p>
+    </div></div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('csvfile').addEventListener('change', function (e) {
+    var f = e.target.files[0];
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function () { document.getElementById('csv').value = r.result; };
+    r.readAsText(f);
+  });
+</script>

@@ -39,11 +39,17 @@ function seedAll() {
   const progICT = insProgramme.run('Information and Communication Technology', 'ICT', deptCS).lastInsertRowid;
   const progCYB = insProgramme.run('Cyber Security', 'CYB', deptCS).lastInsertRowid;
   const progMTH = insProgramme.run('Mathematics', 'MTH', deptMTH).lastInsertRowid;
+  const progMEE = insProgramme.run('Mechanical Engineering', 'MEE', deptMEE).lastInsertRowid;
 
   // ---------- Remaining users ----------
   const hodCsId = insUser.run('Dr. Funmilayo Bello', 'hod.cs@crawford.edu.ng', hash, 'hod', deptCS, null, null).lastInsertRowid;
   const hodMthId = insUser.run('Dr. Ibrahim Suleiman', 'hod.mth@crawford.edu.ng', hash, 'hod', deptMTH, null, null).lastInsertRowid;
   const hodMeeId = insUser.run('Dr. Patience Igwe', 'hod.mee@crawford.edu.ng', hash, 'hod', deptMEE, null, null).lastInsertRowid;
+
+  // Programme Coordinator for Computer Science. ICT and Cyber Security have no
+  // coordinator, so the HOD handles those programmes directly.
+  const coordCsId = insUser.run('Dr. Ngozi Anyanwu', 'coord.cs@crawford.edu.ng', hash, 'coordinator', deptCS, null, null).lastInsertRowid;
+  db.prepare('UPDATE programmes SET coordinator_id = ? WHERE id = ?').run(coordCsId, progCS);
 
   const lect1 = insUser.run('Dr. Chika Umeh', 'lecturer1@crawford.edu.ng', hash, 'lecturer', deptCS, null, null).lastInsertRowid;
   const lect2 = insUser.run('Mr. Tunde Alabi', 'lecturer2@crawford.edu.ng', hash, 'lecturer', deptCS, null, null).lastInsertRowid;
@@ -88,13 +94,25 @@ function seedAll() {
     VALUES (?,?,?,?,?,?,?,'pending',?)
   `).run('CSC420', 'Machine Learning', 3, deptCS, progCS, 400, 45, hodCsId);
 
-  // ---------- Venues ----------
-  const insVenue = db.prepare('INSERT INTO venues (name, building, capacity) VALUES (?,?,?)');
-  const venueA = insVenue.run('Auditorium A', 'Main Block', 250).lastInsertRowid;
-  const venueB = insVenue.run('Lecture Theatre 1', 'Science Block', 120).lastInsertRowid;
-  const venueC = insVenue.run('Lecture Theatre 2', 'Science Block', 80).lastInsertRowid;
-  const venueD = insVenue.run('Seminar Room 3', 'Engineering Block', 40).lastInsertRowid;
-  insVenue.run('Tutorial Room 5', 'Engineering Block', 20);
+  // A service course owned by Computer and Mathematical Sciences but offered
+  // by programmes in two colleges (Computer Science, ICT, Mechanical Engineering).
+  const gst201 = db.prepare(`
+    INSERT INTO courses (code, title, credit_units, department_id, programme_id, level, status, created_by)
+    VALUES ('GST201','Communication Skills II',2,?,?,200,'approved',?)
+  `).run(deptCS, progCS, hodCsId).lastInsertRowid;
+  // University-wide: offered to every programme (and to any added later).
+  db.prepare("UPDATE courses SET scope = 'all' WHERE id = ?").run(gst201);
+  // Every course is linked to its home programme in course_programmes.
+  db.exec('INSERT OR IGNORE INTO course_programmes (course_id, programme_id) SELECT id, programme_id FROM courses WHERE programme_id IS NOT NULL');
+  require('../services/courseAccess').syncCourseScope(gst201);
+
+  // ---------- Venues (each owned by a college; NULL = shared) ----------
+  const insVenue = db.prepare('INSERT INTO venues (name, building, capacity, college_id) VALUES (?,?,?,?)');
+  const venueA = insVenue.run('Auditorium A', 'Main Block', 250, null).lastInsertRowid;
+  const venueB = insVenue.run('Lecture Theatre 1', 'Science Block', 120, collegeScience).lastInsertRowid;
+  const venueC = insVenue.run('Lecture Theatre 2', 'Science Block', 80, collegeScience).lastInsertRowid;
+  const venueD = insVenue.run('Seminar Room 3', 'Engineering Block', 40, collegeEng).lastInsertRowid;
+  insVenue.run('Tutorial Room 5', 'Engineering Block', 20, collegeEng);
 
   // ---------- Timeslots ----------
   const insSlot = db.prepare('INSERT INTO timeslots (day, start_time, end_time) VALUES (?,?,?)');
@@ -111,7 +129,7 @@ function seedAll() {
   // College of Engineering starts with no timetable entries — a clean way
   // to demonstrate that a Dean only ever sees their own college's queue.
   const insOffering = db.prepare(`
-    INSERT INTO course_offerings (course_id, lecturer_id, session_id) VALUES (?,?,?)
+    INSERT INTO course_offerings (course_id, lecturer_id, session_id, allocation_status) VALUES (?,?,?,'approved')
   `);
   const off313 = insOffering.run(csc313, lect1, sessionId).lastInsertRowid;
   const off301 = insOffering.run(csc301, lect1, sessionId).lastInsertRowid;
@@ -153,6 +171,7 @@ function run() {
   console.log('  hod.cs@crawford.edu.ng     HOD, Computer and Mathematical Sciences (CNAS)');
   console.log('  hod.mth@crawford.edu.ng    HOD, Mathematics (CNAS)');
   console.log('  hod.mee@crawford.edu.ng    HOD, Mechanical Engineering (College of Engineering)');
+  console.log('  coord.cs@crawford.edu.ng   Programme Coordinator, Computer Science programme');
   console.log('  lecturer1@crawford.edu.ng  Lecturer, Computer and Mathematical Sciences');
   console.log('  lecturer2@crawford.edu.ng  Lecturer, Computer and Mathematical Sciences');
   console.log('  lecturer3@crawford.edu.ng  Lecturer, Mathematics');

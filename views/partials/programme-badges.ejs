@@ -1,0 +1,21 @@
+<%# Who offers a course. `list` = rows from programmesByCourse(); `homeId`
+    highlights the owning programme; `info` (from scopesByCourse) collapses a
+    university-wide course to one "All programmes" badge and a department-wide
+    one to department badges instead of listing every programme. %>
+<%
+  const scope = (typeof info !== 'undefined' && info) ? info.scope : 'programmes';
+  const rows = (list || []).filter(function(l){ return scope === 'programmes' || l.source !== 'scope'; });
+%>
+<% if (scope === 'all') { %>
+  <span class="badge bg-success-subtle text-success-emphasis border fw-normal" title="Offered to every programme in the university"><i class="fa-solid fa-globe me-1"></i>All programmes</span>
+<% } %>
+<% if (scope === 'departments') { %>
+  <% info.depts.forEach(function(d){ %>
+    <span class="badge bg-success-subtle text-success-emphasis border fw-normal" title="Every programme in <%= d.name %>"><i class="fa-solid fa-building-columns me-1"></i><%= d.code %> (all)</span>
+  <% }) %>
+<% } %>
+<% rows.forEach(function(l){ %>
+  <span class="badge <%= (typeof homeId !== 'undefined' && homeId === l.programme_id) ? 'bg-dark' : 'bg-light text-dark border' %> font-monospace fw-normal"
+        title="<%= l.name %> — <%= l.dept_name %><%= l.college_name ? ' · ' + l.college_name : '' %>"><%= l.college_code ? l.college_code + ' · ' : '' %><%= l.code %></span>
+<% }) %>
+<% if (scope === 'programmes' && !rows.length) { %><span class="text-secondary small">—</span><% } %>

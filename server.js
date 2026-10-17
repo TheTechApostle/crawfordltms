@@ -112,6 +112,7 @@ app.get('/', (req, res) => {
 // ---------- Routers ----------
 app.use('/admin', require('./routes/admin'));
 app.use('/hod', require('./routes/hod'));
+app.use('/coordinator', require('./routes/coordinator'));
 app.use('/dean', require('./routes/dean'));
 app.use('/lecturer', require('./routes/lecturer'));
 app.use('/student', require('./routes/student'));

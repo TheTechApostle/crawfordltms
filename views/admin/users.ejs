@@ -1,0 +1,89 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Academic structure</div><h1 class="h3 mb-0">Staff accounts</h1></div>
+</div>
+
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item"><a class="nav-link <%= !role ? 'active' : '' %>" href="/admin/users">All</a></li>
+  <% [['dean','Deans'],['hod','HODs'],['coordinator','Programme Coordinators'],['lecturer','Lecturers']].forEach(function(r){ %>
+    <li class="nav-item"><a class="nav-link <%= role === r[0] ? 'active' : '' %>" href="/admin/users?role=<%= r[0] %>"><%= r[1] %></a></li>
+  <% }) %>
+</ul>
+
+<div class="row g-3">
+  <div class="col-xl-8">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-users-gear me-1 text-secondary"></i> Accounts (<%= users.length %>)</h2>
+      <p class="text-secondary small">Edit anyone's name, email, role, department or college, reset a password, or delete the account. Which programmes a coordinator runs — in any department or college — is set on the <a href="/admin/programmes">Programmes</a> page. Deleting a coordinator hands their programme back to the HOD.</p>
+      <% users.forEach(function(u){ %>
+        <form id="edit-user-<%= u.id %>" method="POST" action="/admin/users/<%= u.id %>/edit"></form>
+        <form id="delete-user-<%= u.id %>" method="POST" action="/admin/users/<%= u.id %>/delete"></form>
+      <% }) %>
+      <% if (!users.length) { %><p class="text-secondary mb-0">No accounts here yet.</p><% } else { %>
+      <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Department / College</th><th>New password</th><th style="min-width:150px;"></th></tr></thead>
+        <tbody>
+        <% users.forEach(function(u){ %>
+          <tr>
+            <td><input form="edit-user-<%= u.id %>" class="form-control form-control-sm" name="name" value="<%= u.name %>" required></td>
+            <td><input form="edit-user-<%= u.id %>" class="form-control form-control-sm" type="email" name="email" value="<%= u.email %>" required></td>
+            <td>
+              <select form="edit-user-<%= u.id %>" class="form-select form-select-sm" name="role">
+                <% STAFF_ROLES.forEach(function(r){ %><option value="<%= r %>" <%= u.role === r ? 'selected' : '' %>><%= r === 'hod' ? 'HOD' : r.charAt(0).toUpperCase() + r.slice(1) %></option><% }) %>
+              </select>
+              <% if (u.coordinates) { %><div class="form-text mb-0">Runs: <%= u.coordinates %></div><% } %>
+            </td>
+            <td>
+              <select form="edit-user-<%= u.id %>" class="form-select form-select-sm mb-1" name="department_id">
+                <option value="">— department —</option>
+                <% departments.forEach(function(d){ %><option value="<%= d.id %>" <%= u.department_id === d.id ? 'selected' : '' %>><%= d.name %></option><% }) %>
+              </select>
+              <select form="edit-user-<%= u.id %>" class="form-select form-select-sm" name="college_id" title="Only used for Deans">
+                <option value="">— college (Deans) —</option>
+                <% colleges.forEach(function(c){ %><option value="<%= c.id %>" <%= u.college_id === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %>
+              </select>
+            </td>
+            <td><input form="edit-user-<%= u.id %>" class="form-control form-control-sm" name="new_password" type="password" autocomplete="new-password" placeholder="unchanged" style="width:120px;"></td>
+            <td class="d-flex gap-2">
+              <button form="edit-user-<%= u.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
+              <button form="delete-user-<%= u.id %>" class="btn btn-sm btn-danger" type="submit" data-confirm="Delete this account?"><i class="fa-solid fa-trash"></i></button>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table></div>
+      <% } %>
+    </div></div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="card h-100"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-user-plus me-1 text-secondary"></i> Add account</h2>
+      <form method="POST" action="/admin/users">
+        <div class="mb-3"><label class="form-label" for="u_name">Full name</label><input class="form-control" id="u_name" name="name" required></div>
+        <div class="mb-3"><label class="form-label" for="u_email">Email</label><input class="form-control" id="u_email" name="email" type="email" required></div>
+        <div class="mb-3">
+          <label class="form-label" for="u_role">Role</label>
+          <select class="form-select" id="u_role" name="role" required>
+            <option value="coordinator">Programme Coordinator</option>
+            <option value="lecturer">Lecturer</option>
+            <option value="hod">Head of Department</option>
+            <option value="dean">Dean</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="u_dept">Department <span class="text-secondary small">(HODs and lecturers; optional for coordinators, who can run programmes in any department)</span></label>
+          <select class="form-select" id="u_dept" name="department_id"><option value="">— choose —</option><% departments.forEach(function(d){ %><option value="<%= d.id %>"><%= d.name %></option><% }) %></select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="u_college">College <span class="text-secondary small">(Deans only)</span></label>
+          <select class="form-select" id="u_college" name="college_id"><option value="">— choose —</option><% colleges.forEach(function(c){ %><option value="<%= c.id %>"><%= c.name %></option><% }) %></select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="u_pw">Initial password</label>
+          <input class="form-control" id="u_pw" name="password" placeholder="password123 (min. 8 characters)">
+        </div>
+        <button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Create account</button>
+      </form>
+    </div></div>
+  </div>
+</div>

@@ -72,4 +72,66 @@ if (!hasColumn('course_offerings', 'lecturer_estimate')) {
   db.exec('ALTER TABLE course_offerings ADD COLUMN lecturer_estimate INTEGER');
 }
 
+
+// ---------- Programme Coordinator / shared-course / venue-college migrations ----------
+
+// 1. The `users.role` CHECK constraint predates the Programme Coordinator
+// role, and SQLite can't alter a CHECK in place — so an older database has to
+// have its users table rebuilt (same columns, same ids, wider CHECK). Fresh
+// databases already get the right constraint from schema.sql and skip this.
+(function allowCoordinatorRole() {
+  const row = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get();
+  if (!row || row.sql.includes("'coordinator'")) return;
+  const cols = db.prepare('PRAGMA table_info(users)').all().map(c => c.name).join(', ');
+  const widened = row.sql
+    .replace(/^CREATE TABLE\s+("?)users\1/i, 'CREATE TABLE users__new')
+    .replace("'hod','lecturer'", "'hod','coordinator','lecturer'");
+  db.exec('PRAGMA foreign_keys = OFF'); // must be set outside a transaction
+  db.exec('BEGIN');
+  try {
+    db.exec(widened);
+    db.exec(`INSERT INTO users__new (${cols}) SELECT ${cols} FROM users`);
+    db.exec('DROP TABLE users');
+    db.exec('ALTER TABLE users__new RENAME TO users');
+    db.exec('COMMIT');
+  } catch (e) {
+    db.exec('ROLLBACK');
+    throw e;
+  } finally {
+    db.exec('PRAGMA foreign_keys = ON');
+  }
+})();
+
+// 2. New columns on existing tables.
+if (!hasColumn('programmes', 'coordinator_id')) {
+  db.exec('ALTER TABLE programmes ADD COLUMN coordinator_id INTEGER REFERENCES users(id)');
+}
+if (!hasColumn('venues', 'college_id')) {
+  db.exec('ALTER TABLE venues ADD COLUMN college_id INTEGER REFERENCES colleges(id)');
+}
+if (!hasColumn('course_offerings', 'allocation_status')) {
+  db.exec('ALTER TABLE course_offerings ADD COLUMN proposed_lecturer_id INTEGER REFERENCES users(id)');
+  db.exec("ALTER TABLE course_offerings ADD COLUMN allocation_status TEXT NOT NULL DEFAULT 'none'");
+  db.exec('ALTER TABLE course_offerings ADD COLUMN allocation_by INTEGER REFERENCES users(id)');
+  db.exec('ALTER TABLE course_offerings ADD COLUMN allocation_reason TEXT');
+  db.exec('ALTER TABLE course_offerings ADD COLUMN allocation_updated_at TEXT');
+  // Every lecturer already assigned before this workflow existed was
+  // assigned by the HOD directly — treat those as approved allocations.
+  db.exec("UPDATE course_offerings SET allocation_status = 'approved' WHERE lecturer_id IS NOT NULL");
+}
+
+if (!hasColumn('courses', 'scope')) {
+  db.exec("ALTER TABLE courses ADD COLUMN scope TEXT NOT NULL DEFAULT 'programmes'");
+}
+if (!hasColumn('course_programmes', 'source')) {
+  db.exec("ALTER TABLE course_programmes ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'");
+}
+
+// 3. Courses offered by several programmes: every course already tagged to a
+// programme is linked to it in the new many-to-many table (idempotent).
+db.exec(`
+  INSERT OR IGNORE INTO course_programmes (course_id, programme_id)
+  SELECT id, programme_id FROM courses WHERE programme_id IS NOT NULL
+`);
+
 module.exports = { db, isNew };

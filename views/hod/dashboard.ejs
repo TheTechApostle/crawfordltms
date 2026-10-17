@@ -20,7 +20,7 @@
     </div></div></div>
     <div class="col"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
       <span class="stat-icon"><i class="fa-solid fa-clipboard-check"></i></span>
-      <div><div class="stat-num"><%= pendingCount %></div><div class="text-secondary small">Awaiting your approval</div></div>
+      <div><div class="stat-num"><%= pendingCount %></div><div class="text-secondary small">Timetable slots awaiting you</div></div>
     </div></div></div>
     <div class="col"><div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
       <span class="stat-icon"><i class="fa-regular fa-calendar-check"></i></span>
@@ -31,6 +31,7 @@
     <a class="btn btn-gold" href="/hod/courses"><i class="fa-solid fa-book me-1"></i> Manage courses</a>
     <a class="btn btn-outline-secondary" href="/hod/approvals"><i class="fa-solid fa-clipboard-check me-1"></i> Review approval queue</a>
     <a class="btn btn-outline-secondary" href="/hod/assign"><i class="fa-solid fa-chalkboard-user me-1"></i> Assign lecturers</a>
+    <a class="btn <%= pendingAllocationCount ? 'btn-gold' : 'btn-outline-secondary' %>" href="/hod/allocations"><i class="fa-solid fa-user-check me-1"></i> Allocation approvals (<%= pendingAllocationCount %>)</a>
     <a class="btn btn-outline-secondary" href="/hod/programmes"><i class="fa-solid fa-diagram-project me-1"></i> Programmes (<%= programmeCount %>)</a>
   </div>
 <% } %>

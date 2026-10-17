@@ -8,6 +8,8 @@
     <li class="nav-item"><a href="/admin/departments" class="nav-link <%= isActive('/admin/departments') %>"><i class="fa-solid fa-building-columns fa-fw me-2"></i>Departments</a></li>
     <li class="nav-item"><a href="/admin/programmes" class="nav-link <%= isActive('/admin/programmes') %>"><i class="fa-solid fa-diagram-project fa-fw me-2"></i>Programmes</a></li>
     <li class="nav-item"><a href="/admin/courses" class="nav-link <%= isActive('/admin/courses') %>"><i class="fa-solid fa-book fa-fw me-2"></i>Courses</a></li>
+    <li class="nav-item"><a href="/admin/courses/import" class="nav-link <%= isActive('/admin/courses/import') %>"><i class="fa-solid fa-file-arrow-up fa-fw me-2"></i>Bulk upload courses</a></li>
+    <li class="nav-item"><a href="/admin/users" class="nav-link <%= isActive('/admin/users') %>"><i class="fa-solid fa-users-gear fa-fw me-2"></i>Staff accounts</a></li>
     <li class="nav-item"><a href="/admin/students" class="nav-link <%= isActive('/admin/students') %>"><i class="fa-solid fa-user-graduate fa-fw me-2"></i>Students</a></li>
     <li class="nav-item"><a href="/admin/venues" class="nav-link <%= isActive('/admin/venues') %>"><i class="fa-solid fa-door-open fa-fw me-2"></i>Venues</a></li>
     <li class="nav-item"><a href="/admin/timeslots" class="nav-link <%= isActive('/admin/timeslots') %>"><i class="fa-regular fa-clock fa-fw me-2"></i>Timeslots</a></li>
@@ -20,15 +22,21 @@
     <li class="nav-item"><a href="/hod/programmes" class="nav-link <%= isActive('/hod/programmes') %>"><i class="fa-solid fa-diagram-project fa-fw me-2"></i>Programmes</a></li>
     <li class="nav-item"><a href="/hod/courses" class="nav-link <%= isActive('/hod/courses') %>"><i class="fa-solid fa-book fa-fw me-2"></i>Courses</a></li>
     <li class="nav-item"><a href="/hod/assign" class="nav-link <%= isActive('/hod/assign') %>"><i class="fa-solid fa-chalkboard-user fa-fw me-2"></i>Assign lecturers</a></li>
+    <li class="nav-item"><a href="/hod/allocations" class="nav-link <%= isActive('/hod/allocations') %>"><i class="fa-solid fa-user-check fa-fw me-2"></i>Allocation approvals</a></li>
     <li class="nav-item"><a href="/hod/approvals" class="nav-link <%= isActive('/hod/approvals') %>"><i class="fa-solid fa-clipboard-check fa-fw me-2"></i>Approval queue</a></li>
     <li class="nav-item"><a href="/hod/timetable" class="nav-link <%= isActive('/hod/timetable') %>"><i class="fa-regular fa-calendar fa-fw me-2"></i>Department timetable</a></li>
   <% } else if (user.role === 'dean') { %>
     <li class="nav-item"><a href="/dean" class="nav-link <%= isActive('/dean') %>"><i class="fa-solid fa-gauge fa-fw me-2"></i>Dashboard</a></li>
     <li class="nav-item"><a href="/dean/departments" class="nav-link <%= isActive('/dean/departments') %>"><i class="fa-solid fa-building-columns fa-fw me-2"></i>Departments</a></li>
+    <li class="nav-item"><a href="/dean/allocation" class="nav-link <%= isActive('/dean/allocation') %>"><i class="fa-solid fa-chalkboard-user fa-fw me-2"></i>Lecturer allocation</a></li>
     <li class="nav-item"><a href="/dean/timetable" class="nav-link <%= isActive('/dean/timetable') %>"><i class="fa-solid fa-table-cells fa-fw me-2"></i>College timetable</a></li>
     <li class="nav-item"><a href="/dean/courses" class="nav-link <%= isActive('/dean/courses') %>"><i class="fa-solid fa-book fa-fw me-2"></i>Course approvals</a></li>
     <li class="nav-item"><a href="/dean/approvals" class="nav-link <%= isActive('/dean/approvals') %>"><i class="fa-solid fa-clipboard-check fa-fw me-2"></i>Approval queue</a></li>
     <li class="nav-item"><a href="/dean/clashes" class="nav-link <%= isActive('/dean/clashes') %>"><i class="fa-solid fa-triangle-exclamation fa-fw me-2"></i>Cross-dept. clashes</a></li>
+  <% } else if (user.role === 'coordinator') { %>
+    <li class="nav-item"><a href="/coordinator" class="nav-link <%= isActive('/coordinator') %>"><i class="fa-solid fa-gauge fa-fw me-2"></i>Dashboard</a></li>
+    <li class="nav-item"><a href="/coordinator/courses" class="nav-link <%= isActive('/coordinator/courses') %>"><i class="fa-solid fa-book fa-fw me-2"></i>Programme courses</a></li>
+    <li class="nav-item"><a href="/coordinator/allocation" class="nav-link <%= isActive('/coordinator/allocation') %>"><i class="fa-solid fa-chalkboard-user fa-fw me-2"></i>Lecturer allocation</a></li>
   <% } else if (user.role === 'lecturer') { %>
     <li class="nav-item"><a href="/lecturer" class="nav-link <%= isActive('/lecturer') %>"><i class="fa-solid fa-gauge fa-fw me-2"></i>Dashboard</a></li>
     <li class="nav-item"><a href="/lecturer/courses" class="nav-link <%= path.startsWith('/lecturer/courses') ? 'active' : '' %>"><i class="fa-solid fa-book-open fa-fw me-2"></i>My courses</a></li>

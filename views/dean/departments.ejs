@@ -18,7 +18,7 @@
   <% } else { %>
     <div class="table-responsive"><table class="table table-hover align-middle mb-0">
       <thead><tr>
-        <th>Department</th><th>Head of Department</th><th>Courses</th><th>Lecturers</th><th>Students</th><th>Offered this session</th>
+        <th>Department</th><th>Head of Department</th><th>Courses</th><th>Lecturers</th><th>Students</th><th>Offered this session</th><th></th>
       </tr></thead>
       <tbody>
       <% departments.forEach(function(d){ %>
@@ -40,6 +40,7 @@
           <td><%= d.lecturer_count %></td>
           <td><%= d.student_count %></td>
           <td><%= d.offerings_this_session %></td>
+          <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="/dean/allocation?department_id=<%= d.id %>"><i class="fa-solid fa-chalkboard-user me-1"></i> Allocation</a></td>
         </tr>
       <% }) %>
       </tbody>
@@ -47,39 +48,4 @@
   <% } %>
 </div></div>
 
-<div class="card"><div class="card-body">
-  <h2 class="h6 card-title"><i class="fa-solid fa-chalkboard-user me-1 text-secondary"></i> Lecturers in charge — <%= session ? session.name : 'no active session' %></h2>
-  <% if (!session) { %>
-    <p class="text-secondary mb-0">No active session — nothing is offered yet.</p>
-  <% } else if (!lecturersInCharge.length) { %>
-    <p class="text-secondary mb-0">No courses offered yet this session across <%= college.name %>.</p>
-  <% } else { %>
-    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-      <thead><tr><th>Course</th><th>Department</th><th>Lecturer in charge</th><th>Registered</th><th>Timetable status</th></tr></thead>
-      <tbody>
-      <% lecturersInCharge.forEach(function(o){ %>
-        <tr>
-          <td><%= o.code %> — <%= o.title %></td>
-          <td><%= o.dept_name %></td>
-          <td>
-            <% if (o.lecturer_name) { %>
-              <%= o.lecturer_name %><div class="form-text mb-0"><%= o.lecturer_email %></div>
-            <% } else { %>
-              <span class="text-secondary">— unassigned —</span>
-            <% } %>
-          </td>
-          <td><%= o.registered_count %></td>
-          <td>
-            <% if (o.entry_status) { %>
-              <span class="badge badge-<%= o.entry_status %>"><%= o.entry_status.replace('_',' ') %></span>
-            <% } else { %>
-              <span class="badge bg-light text-dark border">not scheduled</span>
-            <% } %>
-          </td>
-        </tr>
-      <% }) %>
-      </tbody>
-    </table></div>
-  <% } %>
-</div></div>
 <% } %>

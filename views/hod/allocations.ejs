@@ -1,0 +1,43 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Head of Department</div><h1 class="h3 mb-0">Allocation approvals</h1></div>
+  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+</div>
+
+<div class="card"><div class="card-body">
+  <p class="text-secondary small">Programme Coordinators propose which lecturer teaches each course; nothing takes effect until you approve it here. The Dean can see the result but doesn't approve it.</p>
+  <% if (!dept) { %>
+    <p class="text-secondary mb-0">No department assigned.</p>
+  <% } else if (!pending.length) { %>
+    <div class="text-center py-4 text-secondary"><i class="fa-solid fa-circle-check fa-2x mb-2 d-block"></i>No allocations are waiting for your approval.</div>
+  <% } else { %>
+    <form id="approve-all" method="POST" action="/hod/allocations/approve-all"></form>
+    <% pending.forEach(function(o){ %>
+      <form id="approve-<%= o.id %>" method="POST" action="/hod/allocations/<%= o.id %>/approve"></form>
+      <form id="reject-<%= o.id %>" method="POST" action="/hod/allocations/<%= o.id %>/reject"></form>
+    <% }) %>
+    <div class="d-flex justify-content-end mb-2">
+      <button form="approve-all" class="btn btn-sm btn-gold" type="submit" data-confirm="Approve all <%= pending.length %> pending allocation(s)?"><i class="fa-solid fa-check-double me-1"></i> Approve all (<%= pending.length %>)</button>
+    </div>
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead><tr><th>Course</th><th>Programme</th><th>Proposed lecturer</th><th>Proposed by</th><th>Replaces</th><th style="min-width:330px;"></th></tr></thead>
+      <tbody>
+      <% pending.forEach(function(o){ %>
+        <tr>
+          <td><span class="font-monospace"><%= o.code %></span> — <%= o.title %></td>
+          <td class="text-secondary small"><%= o.programme_name || '—' %></td>
+          <td class="fw-medium"><%= o.proposed_name %></td>
+          <td><%= o.proposed_by || '—' %></td>
+          <td class="text-secondary"><%= o.current_lecturer || '— none —' %></td>
+          <td>
+            <div class="d-flex gap-2">
+              <button form="approve-<%= o.id %>" class="btn btn-sm btn-gold" type="submit"><i class="fa-solid fa-thumbs-up me-1"></i> Approve</button>
+              <input form="reject-<%= o.id %>" class="form-control form-control-sm" name="reason" placeholder="Reason (optional)" style="max-width:160px;">
+              <button form="reject-<%= o.id %>" class="btn btn-sm btn-outline-danger" type="submit"><i class="fa-solid fa-thumbs-down me-1"></i> Send back</button>
+            </div>
+          </td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table></div>
+  <% } %>
+</div></div>

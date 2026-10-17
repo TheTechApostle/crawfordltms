@@ -5,7 +5,16 @@
 <div class="row g-3">
   <div class="col-lg-7">
     <div class="card h-100"><div class="card-body">
-      <h2 class="h6 card-title"><i class="fa-solid fa-door-open me-1 text-secondary"></i> All venues</h2>
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+        <h2 class="h6 card-title mb-0"><i class="fa-solid fa-door-open me-1 text-secondary"></i> All venues</h2>
+        <form method="GET" action="/admin/venues" class="d-flex align-items-center gap-2">
+          <select name="college_id" class="form-select form-select-sm" onchange="this.form.submit()" style="max-width:240px;">
+            <option value="">All colleges</option>
+            <option value="shared" <%= collegeId === 'shared' ? 'selected' : '' %>>Shared (no single college)</option>
+            <% colleges.forEach(function(c){ %><option value="<%= c.id %>" <%= String(collegeId) === String(c.id) ? 'selected' : '' %>><%= c.name %></option><% }) %>
+          </select>
+        </form>
+      </div>
 
       <% venues.forEach(function(v){ %>
         <form id="edit-venue-<%= v.id %>" method="POST" action="/admin/venues/<%= v.id %>/edit"></form>
@@ -13,12 +22,18 @@
       <% }) %>
 
       <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-        <thead><tr><th>Name</th><th>Building</th><th>Capacity</th><th style="min-width:150px;"></th></tr></thead>
+        <thead><tr><th>Name</th><th>Building</th><th>College</th><th>Capacity</th><th style="min-width:150px;"></th></tr></thead>
         <tbody>
         <% venues.forEach(function(v){ %>
           <tr>
             <td><input form="edit-venue-<%= v.id %>" class="form-control form-control-sm" name="name" value="<%= v.name %>" required></td>
             <td><input form="edit-venue-<%= v.id %>" class="form-control form-control-sm" name="building" value="<%= v.building || '' %>"></td>
+            <td>
+              <select form="edit-venue-<%= v.id %>" class="form-select form-select-sm" name="college_id">
+                <option value="">Shared (all colleges)</option>
+                <% colleges.forEach(function(c){ %><option value="<%= c.id %>" <%= v.college_id === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %>
+              </select>
+            </td>
             <td><input form="edit-venue-<%= v.id %>" class="form-control form-control-sm" name="capacity" type="number" style="width:90px;" value="<%= v.capacity %>" required></td>
             <td class="d-flex gap-2">
               <button form="edit-venue-<%= v.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
@@ -42,6 +57,14 @@
         <div class="mb-3">
           <label for="building" class="form-label">Building</label>
           <input class="form-control" id="building" name="building" placeholder="Main Block">
+        </div>
+        <div class="mb-3">
+          <label for="college_id" class="form-label">College</label>
+          <select class="form-select" id="college_id" name="college_id">
+            <option value="">Shared (all colleges)</option>
+            <% colleges.forEach(function(c){ %><option value="<%= c.id %>"><%= c.name %></option><% }) %>
+          </select>
+          <div class="form-text">The college that owns or mainly uses this venue.</div>
         </div>
         <div class="mb-3">
           <label for="capacity" class="form-label">Capacity</label>

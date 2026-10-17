@@ -1,0 +1,30 @@
+<%# "Offered to" controls for add-course forms: who takes this course.
+    Needs `allProgrammes`. Posts scope, department_ids[], programme_ids[]. %>
+<%
+  const depts = []; const seen = {};
+  allProgrammes.forEach(function(p){ if (!seen[p.dept_id]) { seen[p.dept_id] = 1; depts.push(p); } });
+%>
+<div class="row g-2">
+  <div class="col-md-4 mb-3">
+    <label class="form-label">Offered to</label>
+    <select class="form-select" name="scope" onchange="var f=this.closest('form'); f.querySelector('.scope-depts').style.display=this.value==='departments'?'':'none'; f.querySelector('.scope-progs').style.display=this.value==='all'?'none':'';">
+      <option value="programmes">Selected programmes</option>
+      <option value="departments">Whole departments</option>
+      <option value="all">All programmes (university-wide, e.g. GST)</option>
+    </select>
+  </div>
+  <div class="col-md-4 mb-3 scope-depts" style="display:none;">
+    <label class="form-label">Departments</label>
+    <select class="form-select" name="department_ids" multiple size="4">
+      <% depts.forEach(function(d){ %><option value="<%= d.dept_id %>"><%= d.college_code ? d.college_code + ' · ' : '' %><%= d.dept_name %></option><% }) %>
+    </select>
+    <div class="form-text">Every programme in them, including ones added later.</div>
+  </div>
+  <div class="col-md-4 mb-3 scope-progs">
+    <label class="form-label">Plus these programmes <span class="text-secondary small">(optional)</span></label>
+    <select class="form-select" name="programme_ids" multiple size="4">
+      <% allProgrammes.forEach(function(p){ %><option value="<%= p.id %>"><%= p.college_code ? p.college_code + ' · ' : '' %><%= p.name %> (<%= p.dept_code %>)</option><% }) %>
+    </select>
+    <div class="form-text">Ctrl/Cmd-click to pick several.</div>
+  </div>
+</div>

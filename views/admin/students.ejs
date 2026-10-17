@@ -9,6 +9,7 @@
       <p class="text-secondary small">Students can also create their own account at <code>/register/student</code> — self-signup and this bulk import are both available side by side.</p>
 
       <% students.forEach(function(s){ %>
+        <form id="edit-student-<%= s.id %>" method="POST" action="/admin/students/<%= s.id %>/edit"></form>
         <form id="delete-student-<%= s.id %>" method="POST" action="/admin/students/<%= s.id %>/delete"></form>
       <% }) %>
 
@@ -16,15 +17,23 @@
         <p class="text-secondary mb-0">No students yet.</p>
       <% } else { %>
         <div class="table-responsive" style="max-height:520px; overflow-y:auto;"><table class="table table-hover align-middle mb-0">
-          <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Level</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Level</th><th>New password</th><th style="min-width:150px;"></th></tr></thead>
           <tbody>
           <% students.forEach(function(s){ %>
             <tr>
-              <td><%= s.name %></td>
-              <td class="text-secondary small"><%= s.email %></td>
-              <td><%= s.dept_name || '—' %></td>
-              <td><%= s.level || '—' %></td>
-              <td><button form="delete-student-<%= s.id %>" class="btn btn-sm btn-outline-danger" type="submit" data-confirm="Remove this student account?"><i class="fa-solid fa-trash"></i></button></td>
+              <td><input form="edit-student-<%= s.id %>" class="form-control form-control-sm" name="name" value="<%= s.name %>" required></td>
+              <td><input form="edit-student-<%= s.id %>" class="form-control form-control-sm" type="email" name="email" value="<%= s.email %>" required></td>
+              <td>
+                <select form="edit-student-<%= s.id %>" class="form-select form-select-sm" name="department_id" required>
+                  <% departments.forEach(function(d){ %><option value="<%= d.id %>" <%= s.department_id === d.id ? 'selected' : '' %>><%= d.name %></option><% }) %>
+                </select>
+              </td>
+              <td><input form="edit-student-<%= s.id %>" class="form-control form-control-sm" name="level" type="number" value="<%= s.level || '' %>" style="width:80px;" required></td>
+              <td><input form="edit-student-<%= s.id %>" class="form-control form-control-sm" name="new_password" type="password" autocomplete="new-password" placeholder="unchanged" style="width:120px;"></td>
+              <td class="d-flex gap-2">
+                <button form="edit-student-<%= s.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
+                <button form="delete-student-<%= s.id %>" class="btn btn-sm btn-outline-danger" type="submit" data-confirm="Remove this student account?"><i class="fa-solid fa-trash"></i></button>
+              </td>
             </tr>
           <% }) %>
           </tbody>
@@ -34,7 +43,21 @@
   </div>
 
   <div class="col-lg-5">
-    <div class="card h-100"><div class="card-body">
+    <div class="card mb-3"><div class="card-body">
+      <h2 class="h6 card-title"><i class="fa-solid fa-user-plus me-1 text-secondary"></i> Add one student</h2>
+      <form method="POST" action="/admin/students">
+        <div class="row g-2">
+          <div class="col-md-6 mb-2"><label class="form-label" for="s_name">Name</label><input class="form-control" id="s_name" name="name" required></div>
+          <div class="col-md-6 mb-2"><label class="form-label" for="s_email">Email</label><input class="form-control" id="s_email" name="email" type="email" required></div>
+          <div class="col-md-6 mb-2"><label class="form-label" for="s_dept">Department</label>
+            <select class="form-select" id="s_dept" name="department_id" required><% departments.forEach(function(d){ %><option value="<%= d.id %>"><%= d.name %></option><% }) %></select></div>
+          <div class="col-md-3 mb-2"><label class="form-label" for="s_level">Level</label><input class="form-control" id="s_level" name="level" type="number" required placeholder="300"></div>
+          <div class="col-md-3 mb-2"><label class="form-label" for="s_pw">Password</label><input class="form-control" id="s_pw" name="password" placeholder="password123"></div>
+        </div>
+        <button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Add student</button>
+      </form>
+    </div></div>
+    <div class="card"><div class="card-body">
       <h2 class="h6 card-title"><i class="fa-solid fa-file-import me-1 text-secondary"></i> Bulk import</h2>
       <p class="text-secondary small">Paste one student per line: <code>name,email,department_code,level</code></p>
       <form method="POST" action="/admin/students/import">

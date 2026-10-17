@@ -3,27 +3,40 @@
   <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
 </div>
 
+<% const statusBadge = { approved: 'published', pending: 'lecturer_ok', rejected: 'rejected', none: 'draft' };
+   const statusText = { approved: 'approved', pending: 'awaiting your approval', rejected: 'sent back', none: 'not allocated' }; %>
+
 <div class="card"><div class="card-body">
+  <p class="text-secondary small">You allocate lecturers directly for courses whose programme has no coordinator (or no programme). Where a Programme Coordinator runs the programme, they propose and you approve under <a href="/hod/allocations">Allocation approvals</a>.</p>
   <% if (!offerings.length) { %>
-    <p class="text-secondary mb-0">No course offerings yet this session. Ask the registrar to offer department courses.</p>
+    <p class="text-secondary mb-0">No course offerings yet this session. Offer approved department courses first.</p>
   <% } else { %>
     <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-      <thead><tr><th>Course</th><th>Registered</th><th>Assign lecturer</th></tr></thead>
+      <thead><tr><th>Course</th><th>Programme</th><th>Registered</th><th>Status</th><th>Lecturer</th></tr></thead>
       <tbody>
       <% offerings.forEach(function(o){ %>
         <tr>
-          <td><%= o.code %> — <%= o.title %></td>
+          <td><span class="font-monospace"><%= o.code %></span> — <%= o.title %></td>
+          <td class="small"><%= o.programme_code || '—' %><% if (o.coordinator_name) { %><div class="form-text mb-0">Coordinator: <%= o.coordinator_name %></div><% } %></td>
           <td><%= o.registered_count %></td>
           <td>
-            <form method="POST" action="/hod/assign/<%= o.id %>" class="d-flex gap-2">
-              <select name="lecturer_id" class="form-select form-select-sm" style="max-width:220px;">
-                <option value="">— unassigned —</option>
-                <% lecturers.forEach(function(l){ %>
-                  <option value="<%= l.id %>" <%= o.lecturer_id === l.id ? 'selected' : '' %>><%= l.name %></option>
-                <% }) %>
-              </select>
-              <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
-            </form>
+            <span class="badge badge-<%= statusBadge[o.allocation_status] %>"><%= statusText[o.allocation_status] %></span>
+            <% if (o.allocation_status === 'pending' && o.proposed_name) { %><div class="form-text mb-0">Proposed: <%= o.proposed_name %></div><% } %>
+          </td>
+          <td>
+            <% if (o.coordinator_name) { %>
+              <%= o.lecturer_name || '—' %> <span class="text-secondary small">(via coordinator)</span>
+            <% } else { %>
+              <form method="POST" action="/hod/assign/<%= o.id %>" class="d-flex gap-2">
+                <select name="lecturer_id" class="form-select form-select-sm" style="max-width:220px;">
+                  <option value="">— unassigned —</option>
+                  <% lecturers.forEach(function(l){ %>
+                    <option value="<%= l.id %>" <%= o.lecturer_id === l.id ? 'selected' : '' %>><%= l.name %></option>
+                  <% }) %>
+                </select>
+                <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
+              </form>
+            <% } %>
           </td>
         </tr>
       <% }) %>

@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/db');
-const { requireRole } = require('../middleware/auth');
+const { requireRole, flash } = require('../middleware/auth');
+const access = require('../services/courseAccess');
 const { approve, reject } = require('../services/approvalService');
 
 router.use(requireRole('hod'));
@@ -33,13 +34,17 @@ function entryInDept(entryId, departmentId) {
 router.get('/', (req, res) => {
   const dept = myDept(req);
   const session = activeSession();
-  let pendingCount = 0, courseCount = 0, pendingCourseCount = 0, programmeCount = 0;
+  let pendingCount = 0, courseCount = 0, pendingCourseCount = 0, programmeCount = 0, pendingAllocationCount = 0;
   if (dept) {
     courseCount = db.prepare('SELECT COUNT(*) c FROM courses WHERE department_id = ?').get(dept.id).c;
     pendingCourseCount = db.prepare("SELECT COUNT(*) c FROM courses WHERE department_id = ? AND status = 'pending'").get(dept.id).c;
     programmeCount = db.prepare('SELECT COUNT(*) c FROM programmes WHERE department_id = ?').get(dept.id).c;
   }
   if (dept && session) {
+    pendingAllocationCount = db.prepare(`
+      SELECT COUNT(*) c FROM course_offerings co JOIN courses c ON c.id = co.course_id
+      WHERE c.department_id = ? AND co.session_id = ? AND co.allocation_status = 'pending'
+    `).get(dept.id, session.id).c;
     pendingCount = db.prepare(`
       SELECT COUNT(*) c FROM timetable_entries te
       JOIN course_offerings co ON co.id = te.offering_id
@@ -47,27 +52,39 @@ router.get('/', (req, res) => {
       WHERE c.department_id = ? AND co.session_id = ? AND te.status = 'lecturer_ok'
     `).get(dept.id, session.id).c;
   }
-  res.render('hod/dashboard', { title: 'HOD dashboard', dept, session, pendingCount, courseCount, pendingCourseCount, programmeCount });
+  res.render('hod/dashboard', { title: 'HOD dashboard', dept, session, pendingCount, courseCount, pendingCourseCount, programmeCount, pendingAllocationCount });
 });
 
 // ---------- Programmes (the HOD's own department only) ----------
 router.get('/programmes', (req, res) => {
   const dept = myDept(req);
-  let programmes = [];
+  let programmes = [], coordinators = [];
   if (dept) {
     programmes = db.prepare(`
-      SELECT p.*, (SELECT COUNT(*) FROM courses c WHERE c.programme_id = p.id) AS course_count
-      FROM programmes p WHERE p.department_id = ? ORDER BY p.name
+      SELECT p.*, cu.name AS coordinator_name,
+             (SELECT COUNT(*) FROM course_programmes cp WHERE cp.programme_id = p.id) AS course_count
+      FROM programmes p LEFT JOIN users cu ON cu.id = p.coordinator_id
+      WHERE p.department_id = ? ORDER BY p.name
     `).all(dept.id);
+    // Any coordinator account can be seated on one of this department's programmes —
+    // coordinators may run programmes across departments.
+    coordinators = db.prepare(`
+      SELECT u.id, u.name, u.email, d.code AS dept_code FROM users u
+      LEFT JOIN departments d ON d.id = u.department_id
+      WHERE u.role = 'coordinator' ORDER BY u.name
+    `).all();
   }
-  res.render('hod/programmes', { title: 'Programmes', dept, programmes });
+  res.render('hod/programmes', { title: 'Programmes', dept, programmes, coordinators });
 });
 
 router.post('/programmes', (req, res) => {
   const dept = myDept(req);
   if (!dept) return res.redirect('/hod/programmes');
   const { name, code } = req.body;
-  db.prepare('INSERT INTO programmes (name, code, department_id) VALUES (?, ?, ?)').run(name, code, dept.id);
+  try {
+    db.prepare('INSERT INTO programmes (name, code, department_id) VALUES (?, ?, ?)').run(name, code, dept.id);
+    access.syncAllScopes();
+  } catch (e) { flash(req, 'error', 'That programme code is already used in your department.'); }
   res.redirect('/hod/programmes');
 });
 
@@ -76,7 +93,26 @@ router.post('/programmes/:id/edit', (req, res) => {
   const programme = dept && db.prepare('SELECT * FROM programmes WHERE id = ? AND department_id = ?').get(req.params.id, dept.id);
   if (!programme) return res.redirect('/hod/programmes');
   const { name, code } = req.body;
-  db.prepare('UPDATE programmes SET name = ?, code = ? WHERE id = ?').run(name, code, programme.id);
+  try {
+    db.prepare('UPDATE programmes SET name = ?, code = ? WHERE id = ?').run(name, code, programme.id);
+  } catch (e) { flash(req, 'error', 'That programme code is already used in your department.'); }
+  res.redirect('/hod/programmes');
+});
+
+// Seat, change or remove a programme's coordinator. With no coordinator the
+// HOD handles that programme's courses and lecturer allocation directly —
+// so clearing this is how the HOD takes over while a coordinator is away.
+router.post('/programmes/:id/coordinator', (req, res) => {
+  const dept = myDept(req);
+  const programme = dept && db.prepare('SELECT * FROM programmes WHERE id = ? AND department_id = ?').get(req.params.id, dept.id);
+  if (!programme) return res.redirect('/hod/programmes');
+  const cid = req.body.coordinator_id ? Number(req.body.coordinator_id) : null;
+  if (cid && !db.prepare("SELECT 1 FROM users WHERE id = ? AND role = 'coordinator'").get(cid)) {
+    flash(req, 'error', 'Pick a Programme Coordinator account.');
+  } else {
+    db.prepare('UPDATE programmes SET coordinator_id = ? WHERE id = ?').run(cid, programme.id);
+    flash(req, 'success', cid ? `Coordinator set for ${programme.name}.` : `${programme.name} now has no coordinator — you handle its courses and allocation directly.`);
+  }
   res.redirect('/hod/programmes');
 });
 
@@ -84,40 +120,102 @@ router.post('/programmes/:id/delete', (req, res) => {
   const dept = myDept(req);
   const programme = dept && db.prepare('SELECT * FROM programmes WHERE id = ? AND department_id = ?').get(req.params.id, dept.id);
   if (!programme) return res.redirect('/hod/programmes');
-  const inUse = db.prepare('SELECT 1 FROM courses WHERE programme_id = ?').get(programme.id);
+  const inUse = db.prepare("SELECT 1 FROM course_programmes WHERE programme_id = ? AND source = 'manual'").get(programme.id)
+    || db.prepare('SELECT 1 FROM courses WHERE programme_id = ?').get(programme.id);
   if (!inUse) {
+    db.prepare("DELETE FROM course_programmes WHERE programme_id = ? AND source = 'scope'").run(programme.id);
     db.prepare('DELETE FROM programmes WHERE id = ?').run(programme.id);
+  } else {
+    flash(req, 'error', 'That programme still has courses — move or remove them first.');
   }
   res.redirect('/hod/programmes');
 });
 
 // ---------- Courses (create/edit/delete proposals; Dean approves) ----------
+// The HOD handles a course directly when its programme has no coordinator (or
+// it has no programme). Where a coordinator runs the programme, its courses
+// show here for visibility but the coordinator adds and edits them.
 router.get('/courses', (req, res) => {
   const dept = myDept(req);
   const session = activeSession();
-  let courses = [], programmes = [];
+  let courses = [], programmes = [], sharedIn = [], linked = {}, scopes = {};
   if (dept) {
     courses = db.prepare(`
-      SELECT c.*, p.name AS programme_name,
+      SELECT c.*, p.name AS programme_name, cu.name AS coordinator_name,
              (SELECT COUNT(*) FROM course_offerings co WHERE co.course_id = c.id AND co.session_id = ?) AS offered_this_session
       FROM courses c
       LEFT JOIN programmes p ON p.id = c.programme_id
+      LEFT JOIN users cu ON cu.id = p.coordinator_id AND cu.role = 'coordinator'
       WHERE c.department_id = ?
       ORDER BY c.code
     `).all(session ? session.id : 0, dept.id);
-    programmes = db.prepare('SELECT * FROM programmes WHERE department_id = ? ORDER BY name').all(dept.id);
+    courses.forEach(c => { c.managed_by = c.coordinator_name ? 'coordinator' : 'hod'; });
+    programmes = db.prepare(`
+      SELECT p.*, cu.name AS coordinator_name FROM programmes p
+      LEFT JOIN users cu ON cu.id = p.coordinator_id AND cu.role = 'coordinator'
+      WHERE p.department_id = ? ORDER BY p.name
+    `).all(dept.id);
+    // Courses owned by other departments (possibly other colleges) that one of this department's programmes also offers.
+    sharedIn = db.prepare(`
+      SELECT DISTINCT c.id, c.code, c.title, c.level, c.scope, d.name AS dept_name, co.name AS college_name, p.code AS programme_code, cp.programme_id
+      FROM course_programmes cp
+      JOIN programmes p ON p.id = cp.programme_id AND p.department_id = ?
+      JOIN courses c ON c.id = cp.course_id AND c.department_id != ?
+      JOIN departments d ON d.id = c.department_id
+      LEFT JOIN colleges co ON co.id = d.college_id
+      ORDER BY c.code
+    `).all(dept.id, dept.id);
+    // University-/department-wide courses apply to every programme: show them once, not once per programme.
+    const seenShared = new Set();
+    sharedIn = sharedIn.filter(c => {
+      if (c.scope === 'programmes') return true;
+      if (seenShared.has(c.id)) return false;
+      seenShared.add(c.id); c.programme_code = c.scope === 'all' ? 'all programmes' : 'whole department'; c.programme_id = null;
+      return true;
+    });
+    linked = access.programmesByCourse(courses.map(c => c.id));
+    scopes = access.scopesByCourse(courses.map(c => c.id));
   }
-  res.render('hod/courses', { title: 'Courses', dept, session, courses, programmes });
+  res.render('hod/courses', {
+    title: 'Courses', dept, session, courses, programmes, sharedIn, linked, scopes,
+    allProgrammes: access.allProgrammesWithCollege(),
+  });
 });
+
+// A programme the HOD may use directly: in their department and without a coordinator.
+function hodProgramme(dept, programmeId) {
+  if (!programmeId) return { id: null };
+  const p = db.prepare(`
+    SELECT p.*, cu.id AS coord FROM programmes p
+    LEFT JOIN users cu ON cu.id = p.coordinator_id AND cu.role = 'coordinator'
+    WHERE p.id = ? AND p.department_id = ?
+  `).get(programmeId, dept.id);
+  if (!p) return null;
+  return p.coord ? { coordinated: true, name: p.name } : p;
+}
+function hodManages(dept, course) {
+  return course && course.department_id === dept.id && access.managerRole(course) === 'hod';
+}
 
 router.post('/courses', (req, res) => {
   const dept = myDept(req);
   if (!dept) return res.redirect('/hod/courses');
   const { code, title, credit_units, programme_id, level, expected_class_size } = req.body;
-  db.prepare(`
-    INSERT INTO courses (code, title, credit_units, department_id, programme_id, level, expected_class_size, status, created_by)
-    VALUES (?,?,?,?,?,?,?,'pending',?)
-  `).run(code, title, credit_units || 3, dept.id, programme_id || null, level, expected_class_size || null, req.session.user.id);
+  const prog = hodProgramme(dept, programme_id);
+  if (!prog || prog.coordinated) {
+    flash(req, 'error', prog ? `${prog.name} has a Programme Coordinator, who adds its courses. Remove the coordinator first if you need to step in.` : 'Pick a programme from your own department.');
+    return res.redirect('/hod/courses');
+  }
+  try {
+    const r = db.prepare(`
+      INSERT INTO courses (code, title, credit_units, department_id, programme_id, level, expected_class_size, status, created_by)
+      VALUES (?,?,?,?,?,?,?,'pending',?)
+    `).run((code || '').trim(), (title || '').trim(), credit_units || 3, dept.id, prog.id, level, expected_class_size || null, req.session.user.id);
+    access.applySharing({ id: r.lastInsertRowid, programme_id: prog.id }, req.body, req.session.user.id);
+    flash(req, 'success', `${code} submitted to the Dean for approval.`);
+  } catch (e) {
+    flash(req, 'error', /UNIQUE/.test(e.message) ? `A course with the code ${code} already exists.` : e.message);
+  }
   res.redirect('/hod/courses');
 });
 
@@ -126,23 +224,77 @@ router.post('/courses/:id/edit', (req, res) => {
   const course = dept && db.prepare('SELECT * FROM courses WHERE id = ? AND department_id = ?').get(req.params.id, dept.id);
   // Only editable while it hasn't been signed off yet — once approved, it's
   // locked here (the registrar can still adjust it directly if needed).
-  if (!course || !['pending', 'rejected'].includes(course.status)) return res.redirect('/hod/courses');
+  if (!course || !['pending', 'rejected'].includes(course.status) || !hodManages(dept, course)) {
+    flash(req, 'error', 'That course can\'t be edited here — it\'s approved, or its programme\'s coordinator runs it.');
+    return res.redirect('/hod/courses');
+  }
   const { code, title, credit_units, programme_id, level, expected_class_size } = req.body;
+  const prog = hodProgramme(dept, programme_id);
+  if (!prog || prog.coordinated) {
+    flash(req, 'error', 'Pick a programme from your department that has no coordinator (or none).');
+    return res.redirect('/hod/courses');
+  }
   // Editing a rejected proposal resubmits it — back to pending, reason cleared.
-  db.prepare(`
-    UPDATE courses SET code = ?, title = ?, credit_units = ?, programme_id = ?, level = ?, expected_class_size = ?,
-           status = 'pending', reject_reason = NULL
-    WHERE id = ?
-  `).run(code, title, credit_units || 3, programme_id || null, level, expected_class_size || null, course.id);
+  try {
+    db.prepare(`
+      UPDATE courses SET code = ?, title = ?, credit_units = ?, programme_id = ?, level = ?, expected_class_size = ?,
+             status = 'pending', reject_reason = NULL
+      WHERE id = ?
+    `).run((code || '').trim(), (title || '').trim(), credit_units || 3, prog.id, level, expected_class_size || null, course.id);
+    if (prog.id) access.linkCourseToProgramme(course.id, prog.id, req.session.user.id);
+  } catch (e) {
+    flash(req, 'error', /UNIQUE/.test(e.message) ? `The code ${code} is already used by another course.` : e.message);
+  }
+  res.redirect('/hod/courses');
+});
+
+router.post('/courses/:id/programmes', (req, res) => {
+  const dept = myDept(req);
+  const course = dept && db.prepare('SELECT * FROM courses WHERE id = ? AND department_id = ?').get(req.params.id, dept.id);
+  if (!hodManages(dept, course)) flash(req, 'error', 'You can\'t change which programmes offer that course — its coordinator runs it.');
+  else {
+    access.applySharing(course, req.body, req.session.user.id);
+    flash(req, 'success', `Programmes offering ${course.code} updated.`);
+  }
+  res.redirect('/hod/courses');
+});
+
+// Add an existing (approved) course from anywhere in the catalogue to one of this department's programmes.
+router.post('/courses/link', (req, res) => {
+  const dept = myDept(req);
+  const prog = dept && hodProgramme(dept, req.body.programme_id);
+  const course = db.prepare('SELECT * FROM courses WHERE code = ? COLLATE NOCASE').get((req.body.code || '').trim());
+  if (!prog || !prog.id || prog.coordinated) flash(req, 'error', 'Pick one of your department\'s programmes that has no coordinator.');
+  else if (!course) flash(req, 'error', `No course with code "${req.body.code}" exists.`);
+  else if (course.status !== 'approved') flash(req, 'error', `${course.code} hasn't been approved yet.`);
+  else {
+    access.linkCourseToProgramme(course.id, prog.id, req.session.user.id);
+    flash(req, 'success', `${course.code} is now offered by ${prog.name} as well.`);
+  }
+  res.redirect('/hod/courses');
+});
+
+router.post('/courses/:id/unlink', (req, res) => {
+  const dept = myDept(req);
+  const prog = dept && db.prepare('SELECT * FROM programmes WHERE id = ? AND department_id = ?').get(req.body.programme_id, dept.id);
+  const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(req.params.id);
+  if (course && course.scope !== 'programmes') {
+    flash(req, 'error', `${course.code} is offered ${course.scope === 'all' ? 'to every programme' : 'to whole departments'} by its owner, so it can't be removed from one programme.`);
+  } else if (prog && course && course.department_id !== dept.id) {
+    db.prepare('DELETE FROM course_programmes WHERE course_id = ? AND programme_id = ?').run(course.id, prog.id);
+    flash(req, 'success', `${course.code} removed from ${prog.name}.`);
+  }
   res.redirect('/hod/courses');
 });
 
 router.post('/courses/:id/delete', (req, res) => {
   const dept = myDept(req);
   const course = dept && db.prepare('SELECT * FROM courses WHERE id = ? AND department_id = ?').get(req.params.id, dept.id);
-  if (!course || !['pending', 'rejected'].includes(course.status)) return res.redirect('/hod/courses');
+  if (!course || !['pending', 'rejected'].includes(course.status) || !hodManages(dept, course)) return res.redirect('/hod/courses');
   const hasOfferings = db.prepare('SELECT 1 FROM course_offerings WHERE course_id = ?').get(course.id);
   if (!hasOfferings) {
+    db.prepare('DELETE FROM course_programmes WHERE course_id = ?').run(course.id);
+    db.prepare('DELETE FROM course_departments WHERE course_id = ?').run(course.id);
     db.prepare('DELETE FROM courses WHERE id = ?').run(course.id);
   }
   res.redirect('/hod/courses');
@@ -159,26 +311,100 @@ router.post('/courses/:id/offer', (req, res) => {
   res.redirect('/hod/courses');
 });
 
-// ---------- Assign lecturers to courses ----------
+// ---------- Lecturer allocation ----------
+// HOD allocates directly for courses whose programme has no coordinator
+// (immediately effective). For coordinator-run programmes the coordinator
+// proposes and the HOD approves on the next page. The Dean only views.
 router.get('/assign', (req, res) => {
   const dept = myDept(req);
   const session = activeSession();
   let offerings = [];
   if (dept && session) {
     offerings = db.prepare(`
-      SELECT co.*, c.code, c.title FROM course_offerings co
+      SELECT co.*, c.code, c.title, c.programme_id, p.code AS programme_code,
+             cu.name AS coordinator_name, lu.name AS lecturer_name, pu.name AS proposed_name
+      FROM course_offerings co
       JOIN courses c ON c.id = co.course_id
+      LEFT JOIN programmes p ON p.id = c.programme_id
+      LEFT JOIN users cu ON cu.id = p.coordinator_id AND cu.role = 'coordinator'
+      LEFT JOIN users lu ON lu.id = co.lecturer_id
+      LEFT JOIN users pu ON pu.id = co.proposed_lecturer_id
       WHERE c.department_id = ? AND co.session_id = ?
+      ORDER BY c.code
     `).all(dept.id, session.id);
   }
-  const lecturers = dept ? db.prepare("SELECT * FROM users WHERE role='lecturer' AND department_id = ?").all(dept.id) : [];
+  const lecturers = dept ? access.eligibleLecturers(dept.id) : [];
   res.render('hod/assign', { title: 'Assign lecturers', dept, session, offerings, lecturers });
 });
 
 router.post('/assign/:offeringId', (req, res) => {
-  const { lecturer_id } = req.body;
-  db.prepare('UPDATE course_offerings SET lecturer_id = ? WHERE id = ?').run(lecturer_id, req.params.offeringId);
+  const dept = myDept(req);
+  const o = dept && access.getOffering(req.params.offeringId);
+  if (!o || o.department_id !== dept.id) return res.redirect('/hod/assign');
+  if (access.managerRole(o) === 'coordinator') {
+    flash(req, 'error', `${o.code} belongs to a programme with a coordinator — they propose the lecturer and you approve it under "Allocation approvals".`);
+    return res.redirect('/hod/assign');
+  }
+  const lecturerId = req.body.lecturer_id ? Number(req.body.lecturer_id) : null;
+  if (lecturerId && !access.isEligibleLecturer(lecturerId, dept.id)) {
+    flash(req, 'error', 'Pick a lecturer from your own department.');
+    return res.redirect('/hod/assign');
+  }
+  access.allocateDirect(o.id, lecturerId, req.session.user.id);
+  flash(req, 'success', lecturerId ? `Lecturer allocated to ${o.code}.` : `${o.code} is unallocated.`);
   res.redirect('/hod/assign');
+});
+
+// ---------- Allocation approvals (coordinator proposals) ----------
+function pendingAllocations(deptId, sessionId) {
+  return db.prepare(`
+    SELECT co.*, c.code, c.title, c.level, p.name AS programme_name,
+           pu.name AS proposed_name, bu.name AS proposed_by, lu.name AS current_lecturer
+    FROM course_offerings co
+    JOIN courses c ON c.id = co.course_id
+    LEFT JOIN programmes p ON p.id = c.programme_id
+    LEFT JOIN users pu ON pu.id = co.proposed_lecturer_id
+    LEFT JOIN users bu ON bu.id = co.allocation_by
+    LEFT JOIN users lu ON lu.id = co.lecturer_id
+    WHERE c.department_id = ? AND co.session_id = ? AND co.allocation_status = 'pending'
+    ORDER BY c.code
+  `).all(deptId, sessionId);
+}
+
+router.get('/allocations', (req, res) => {
+  const dept = myDept(req);
+  const session = activeSession();
+  const pending = dept && session ? pendingAllocations(dept.id, session.id) : [];
+  res.render('hod/allocations', { title: 'Allocation approvals', dept, session, pending });
+});
+
+router.post('/allocations/:offeringId/approve', (req, res) => {
+  const dept = myDept(req);
+  const o = dept && access.getOffering(req.params.offeringId);
+  if (o && o.department_id === dept.id && access.approveAllocation(o.id, req.session.user.id)) {
+    flash(req, 'success', `Allocation for ${o.code} approved.`);
+  }
+  res.redirect('/hod/allocations');
+});
+
+router.post('/allocations/:offeringId/reject', (req, res) => {
+  const dept = myDept(req);
+  const o = dept && access.getOffering(req.params.offeringId);
+  if (o && o.department_id === dept.id && access.rejectAllocation(o.id, req.session.user.id, (req.body.reason || '').trim())) {
+    flash(req, 'success', `Allocation for ${o.code} sent back to the coordinator.`);
+  }
+  res.redirect('/hod/allocations');
+});
+
+// Approve every pending proposal in one go.
+router.post('/allocations/approve-all', (req, res) => {
+  const dept = myDept(req);
+  const session = activeSession();
+  if (dept && session) {
+    const n = pendingAllocations(dept.id, session.id).filter(o => access.approveAllocation(o.id, req.session.user.id)).length;
+    flash(req, 'success', `${n} allocation(s) approved.`);
+  }
+  res.redirect('/hod/allocations');
 });
 
 // ---------- Approval queue ----------

@@ -1,0 +1,120 @@
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
+  <div><div class="kicker">Dean / Timetable Committee<% if (college) { %> · <%= college.name %><% } %></div><h1 class="h3 mb-0">Lecturer allocation</h1></div>
+  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+</div>
+
+<% if (!college) { %>
+  <div class="text-center py-5 text-secondary">
+    <i class="fa-solid fa-landmark fa-2x mb-2 d-block text-secondary"></i>
+    <h3 class="h5 text-dark">No college assigned</h3>
+    <p class="mb-0">Ask the registrar to set you as Dean of a college.</p>
+  </div>
+<% } else { %>
+<%
+  const statusBadge = { approved: 'published', pending: 'lecturer_ok', rejected: 'rejected', none: 'draft' };
+  const statusText = { approved: 'approved', pending: 'awaiting HOD', rejected: 'sent back by HOD', none: 'not allocated' };
+%>
+
+<form method="GET" action="/dean/allocation" class="card mb-3"><div class="card-body">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label" for="department_id">Department</label>
+      <select class="form-select" id="department_id" name="department_id" onchange="this.form.programme_id.value=''; this.form.submit()">
+        <option value="">— choose a department —</option>
+        <% departments.forEach(function(d){ %><option value="<%= d.id %>" <%= String(deptId) === String(d.id) ? 'selected' : '' %>><%= d.name %></option><% }) %>
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="programme_id">Programme</label>
+      <select class="form-select" id="programme_id" name="programme_id" onchange="this.form.submit()">
+        <option value="">All programmes in the department</option>
+        <% programmes.filter(function(p){ return !deptId || p.department_id === Number(deptId); }).forEach(function(p){ %>
+          <option value="<%= p.id %>" <%= String(progId) === String(p.id) ? 'selected' : '' %>><%= deptId ? '' : p.dept_name + ' — ' %><%= p.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="col-md-4 d-flex gap-2">
+      <button class="btn btn-gold" type="submit"><i class="fa-solid fa-filter me-1"></i> Show</button>
+      <% if (rows) { %><a class="btn btn-outline-secondary" href="/dean/allocation">Back to overview</a><% } %>
+    </div>
+  </div>
+  <div class="form-text mt-2">View only — Programme Coordinators propose allocations and each Head of Department approves them.</div>
+</div></form>
+
+<% if (!session) { %>
+  <p class="text-secondary">No active session — nothing is offered yet.</p>
+<% } else if (rows === null) { %>
+
+  <%# ---------- Overview: counts per department / programme, no course list ---------- %>
+  <div class="card"><div class="card-body">
+    <h2 class="h6 card-title"><i class="fa-solid fa-chalkboard-user me-1 text-secondary"></i> Allocation status by department and programme</h2>
+    <p class="text-secondary small">Pick a department or programme to see which lecturer is allocated to each of its courses.</p>
+    <% if (!summary.length) { %>
+      <p class="text-secondary mb-0">No departments in this college yet.</p>
+    <% } else { %>
+    <div class="table-responsive"><table class="table align-middle mb-0">
+      <thead><tr><th>Department / programme</th><th class="text-center">Offered</th><th class="text-center">Approved</th><th class="text-center">Awaiting HOD</th><th class="text-center">Sent back</th><th class="text-center">Not allocated</th><th></th></tr></thead>
+      <tbody>
+      <% summary.forEach(function(row){ %>
+        <tr class="table-light fw-medium">
+          <td><%= row.dept.name %> <span class="text-secondary font-monospace small">(<%= row.dept.code %>)</span></td>
+          <td class="text-center"><%= row.total %></td><td class="text-center"><%= row.approved %></td><td class="text-center"><%= row.pending %></td><td class="text-center"><%= row.rejected %></td><td class="text-center"><%= row.none %></td>
+          <td class="text-end"><a class="btn btn-sm btn-gold" href="/dean/allocation?department_id=<%= row.dept.id %>">View</a></td>
+        </tr>
+        <% row.programmes.forEach(function(pr){ %>
+          <tr>
+            <td class="ps-4"><i class="fa-solid fa-diagram-project me-1 text-secondary"></i><%= pr.prog.name %><% if (pr.prog.coordinator_name) { %> <span class="form-text">· coordinator <%= pr.prog.coordinator_name %></span><% } %></td>
+            <td class="text-center"><%= pr.total %></td><td class="text-center"><%= pr.approved %></td><td class="text-center"><%= pr.pending %></td><td class="text-center"><%= pr.rejected %></td><td class="text-center"><%= pr.none %></td>
+            <td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="/dean/allocation?department_id=<%= row.dept.id %>&programme_id=<%= pr.prog.id %>">View</a></td>
+          </tr>
+        <% }) %>
+      <% }) %>
+      </tbody>
+    </table></div>
+    <% } %>
+  </div></div>
+
+<% } else { %>
+
+  <%# ---------- One department or programme ---------- %>
+  <div class="card"><div class="card-body">
+    <h2 class="h6 card-title"><i class="fa-solid fa-chalkboard-user me-1 text-secondary"></i>
+      <%= selected.name %>
+      <span class="text-secondary fw-normal">— <%= selected.type === 'programme' ? 'programme in ' + selected.dept_name : 'department' %></span>
+    </h2>
+    <% if (selected.type === 'programme') { %>
+      <p class="text-secondary small">Programme coordinator: <%= selected.coordinator_name || 'none — the Head of Department handles allocation directly' %></p>
+    <% } %>
+    <% if (!rows.length) { %>
+      <p class="text-secondary mb-0">No courses offered this session here yet.</p>
+    <% } else { %>
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead><tr><th>Course</th><th>Level</th><th>Offered by</th><th>Lecturer in charge</th><th>Allocation</th><th>Registered</th><th>Timetable</th></tr></thead>
+      <tbody>
+      <% rows.forEach(function(o){ %>
+        <tr>
+          <td><span class="font-monospace"><%= o.code %></span> — <%= o.title %>
+            <% if (o.shared) { %><div class="form-text mb-0"><i class="fa-solid fa-share-nodes me-1"></i>Shared · owned by <%= o.home_dept_name %><%= o.home_college_name && o.home_college_id !== college.id ? ' (' + o.home_college_name + ')' : '' %></div><% } %>
+          </td>
+          <td><%= o.level %></td>
+          <td><%- include('../partials/programme-badges', { list: o.programmes, homeId: o.home_programme_id, info: o.info }) %></td>
+          <td>
+            <% if (o.lecturer_name) { %><%= o.lecturer_name %><div class="form-text mb-0"><%= o.lecturer_email %></div><% } else { %><span class="text-secondary">— unassigned —</span><% } %>
+          </td>
+          <td>
+            <span class="badge badge-<%= statusBadge[o.allocation_status] %>"><%= statusText[o.allocation_status] %></span>
+            <% if (o.allocation_status === 'pending' && o.proposed_name) { %><div class="form-text mb-0">Proposed: <%= o.proposed_name %></div><% } %>
+            <% if (o.allocation_status === 'rejected' && o.allocation_reason) { %><div class="form-text mb-0"><%= o.allocation_reason %></div><% } %>
+          </td>
+          <td><%= o.registered_count %></td>
+          <td>
+            <% if (o.entry_status) { %><span class="badge badge-<%= o.entry_status %>"><%= o.entry_status.replace('_',' ') %></span><% } else { %><span class="badge bg-light text-dark border">not scheduled</span><% } %>
+          </td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table></div>
+    <% } %>
+  </div></div>
+<% } %>
+<% } %>

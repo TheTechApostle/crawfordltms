@@ -6,7 +6,7 @@
   <div class="col-lg-8">
     <div class="card h-100"><div class="card-body">
       <h2 class="h6 card-title"><i class="fa-solid fa-diagram-project me-1 text-secondary"></i> All programmes</h2>
-      <p class="text-secondary small">A department can run several programmes — courses are uploaded against a programme, not just the bare department.</p>
+      <p class="text-secondary small">A department can run several programmes — courses are uploaded against a programme, not just the bare department. A programme's coordinator adds its courses and proposes lecturers; with no coordinator the HOD does both.</p>
       <% if (!programmes.length) { %>
         <p class="text-secondary mb-0">No programmes yet — add one under a department.</p>
       <% } else { %>
@@ -17,7 +17,7 @@
         <% }) %>
 
         <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-          <thead><tr><th>Code</th><th>Name</th><th>Department</th><th>College</th><th>Courses</th><th style="min-width:150px;"></th></tr></thead>
+          <thead><tr><th>Code</th><th>Name</th><th>Department</th><th>College</th><th>Coordinator</th><th>Courses</th><th style="min-width:150px;"></th></tr></thead>
           <tbody>
           <% programmes.forEach(function(p){ %>
             <tr>
@@ -31,6 +31,14 @@
                 </select>
               </td>
               <td class="text-secondary small"><%= p.college_name || '—' %></td>
+              <td>
+                <select form="edit-prog-<%= p.id %>" class="form-select form-select-sm" name="coordinator_id">
+                  <option value="">— none (HOD handles it) —</option>
+                  <% coordinators.forEach(function(u){ %>
+                    <option value="<%= u.id %>" <%= p.coordinator_id === u.id ? 'selected' : '' %>><%= u.name %><%= u.dept_code ? ' (' + u.dept_code + ')' : '' %></option>
+                  <% }) %>
+                </select>
+              </td>
               <td><span class="badge bg-light text-dark border"><%= p.course_count %></span></td>
               <td class="d-flex gap-2">
                 <button form="edit-prog-<%= p.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
@@ -61,6 +69,14 @@
           <select class="form-select" id="department_id" name="department_id" required>
             <% departments.forEach(function(d){ %><option value="<%= d.id %>"><%= d.name %></option><% }) %>
           </select>
+        </div>
+        <div class="mb-3">
+          <label for="coordinator_id" class="form-label">Programme Coordinator <span class="text-secondary small">(optional)</span></label>
+          <select class="form-select" id="coordinator_id" name="coordinator_id">
+            <option value="">— none (HOD handles it) —</option>
+            <% coordinators.forEach(function(u){ %><option value="<%= u.id %>"><%= u.name %><%= u.dept_code ? ' (' + u.dept_code + ')' : '' %></option><% }) %>
+          </select>
+          <div class="form-text">A coordinator can run programmes in several departments or colleges. Create coordinator accounts under Staff accounts.</div>
         </div>
         <button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Add programme</button>
       </form>

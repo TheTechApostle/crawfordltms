@@ -12,7 +12,7 @@
   <div class="col-lg-8">
     <div class="card h-100"><div class="card-body">
       <h2 class="h6 card-title"><i class="fa-solid fa-diagram-project me-1 text-secondary"></i> Programmes under <%= dept.name %></h2>
-      <p class="text-secondary small">Courses are uploaded against one of these programmes, not just the bare department — e.g. Computer Science / ICT / Cyber Security.</p>
+      <p class="text-secondary small">Courses are uploaded against one of these programmes, not just the bare department — e.g. Computer Science / ICT / Cyber Security. A programme with a coordinator has its courses and lecturer allocation run by them (you approve the allocation); with no coordinator, you handle it directly. Coordinator accounts are created by the registrar.</p>
       <% if (!programmes.length) { %>
         <p class="text-secondary mb-0">No programmes yet — add one to start uploading courses under it.</p>
       <% } else { %>
@@ -20,15 +20,25 @@
         <% programmes.forEach(function(p){ %>
           <form id="edit-prog-<%= p.id %>" method="POST" action="/hod/programmes/<%= p.id %>/edit"></form>
           <form id="delete-prog-<%= p.id %>" method="POST" action="/hod/programmes/<%= p.id %>/delete"></form>
+          <form id="coord-prog-<%= p.id %>" method="POST" action="/hod/programmes/<%= p.id %>/coordinator"></form>
         <% }) %>
 
         <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-          <thead><tr><th>Code</th><th>Name</th><th>Courses</th><th style="min-width:150px;"></th></tr></thead>
+          <thead><tr><th>Code</th><th>Name</th><th style="min-width:260px;">Programme coordinator</th><th>Courses</th><th style="min-width:150px;"></th></tr></thead>
           <tbody>
           <% programmes.forEach(function(p){ %>
             <tr>
               <td><input form="edit-prog-<%= p.id %>" class="form-control form-control-sm font-monospace" style="width:90px;" name="code" value="<%= p.code %>" required></td>
               <td><input form="edit-prog-<%= p.id %>" class="form-control form-control-sm" name="name" value="<%= p.name %>" required></td>
+              <td>
+                <div class="d-flex gap-1">
+                  <select form="coord-prog-<%= p.id %>" name="coordinator_id" class="form-select form-select-sm">
+                    <option value="">— none (HOD handles it) —</option>
+                    <% coordinators.forEach(function(u){ %><option value="<%= u.id %>" <%= p.coordinator_id === u.id ? 'selected' : '' %>><%= u.name %><%= u.dept_code ? ' (' + u.dept_code + ')' : '' %></option><% }) %>
+                  </select>
+                  <button form="coord-prog-<%= p.id %>" class="btn btn-sm btn-outline-secondary" type="submit" title="Set coordinator"><i class="fa-solid fa-user-check"></i></button>
+                </div>
+              </td>
               <td><span class="badge bg-light text-dark border"><%= p.course_count %></span></td>
               <td class="d-flex gap-2">
                 <button form="edit-prog-<%= p.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>

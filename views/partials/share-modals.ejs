@@ -1,0 +1,65 @@
+<%# One "Offered by" modal per course: tick every programme — in any college —
+    that also offers it. `canManage(course)` decides which courses get one;
+    `actionBase` is the role's URL prefix, e.g. /admin/courses. The home
+    programme is always included and can't be unticked. %>
+<%
+  const byCollege = {};
+  allProgrammes.forEach(function(p){ const k = p.college_name || 'No college'; (byCollege[k] = byCollege[k] || []).push(p); });
+%>
+<%
+  const deptList = []; const seenD = {};
+  allProgrammes.forEach(function(p){ if (!seenD[p.dept_id]) { seenD[p.dept_id] = 1; deptList.push(p); } });
+%>
+<% courses.forEach(function(c){ if (!canManage(c)) return;
+   const info = (typeof scopes !== 'undefined' && scopes[c.id]) ? scopes[c.id] : { scope: 'programmes', depts: [] };
+   const haveDepts = new Set(info.depts.map(d => d.id));
+   const have = new Set((linked[c.id] || []).filter(l => l.source !== 'scope').map(l => l.programme_id)); %>
+  <div class="modal fade" id="shareModal<%= c.id %>" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+      <form class="modal-content" method="POST" action="<%= actionBase %>/<%= c.id %>/programmes<%= typeof extraQuery !== 'undefined' ? extraQuery : '' %>">
+        <% if (typeof programme !== 'undefined' && programme) { %><input type="hidden" name="programme_id" value="<%= programme.id %>"><% } %>
+        <div class="modal-header">
+          <h5 class="modal-title h6"><i class="fa-solid fa-share-nodes me-1"></i> Programmes offering <%= c.code %></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-secondary small">Choose who takes <strong><%= c.code %></strong>. Everyone sees the same offering and lecturer; the owning department stays in charge of allocation.</p>
+          <div class="mb-3">
+            <% [['programmes','Selected programmes only'],['departments','Whole departments (and any programmes ticked below)'],['all','All programmes in the university (e.g. GST)']].forEach(function(o){ %>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="scope" value="<%= o[0] %>" id="sc<%= c.id %>_<%= o[0] %>" <%= info.scope === o[0] ? 'checked' : '' %>
+                  onchange="var m=this.closest('.modal-body'); m.querySelector('.sc-depts').style.display=this.value==='departments'?'':'none'; m.querySelector('.sc-progs').style.display=this.value==='all'?'none':'';">
+                <label class="form-check-label" for="sc<%= c.id %>_<%= o[0] %>"><%= o[1] %></label>
+              </div>
+            <% }) %>
+          </div>
+          <div class="sc-depts" style="<%= info.scope === 'departments' ? '' : 'display:none;' %>">
+            <div class="fw-medium small text-uppercase text-secondary mb-1">Departments</div>
+            <% deptList.forEach(function(d){ %>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="department_ids" value="<%= d.dept_id %>" id="sd<%= c.id %>_<%= d.dept_id %>" <%= haveDepts.has(d.dept_id) ? 'checked' : '' %>>
+                <label class="form-check-label" for="sd<%= c.id %>_<%= d.dept_id %>"><%= d.dept_name %> <span class="text-secondary small">(<%= d.college_code || '—' %>)</span></label>
+              </div>
+            <% }) %>
+          </div>
+          <div class="sc-progs" style="<%= info.scope === 'all' ? 'display:none;' : '' %>">
+          <% Object.keys(byCollege).forEach(function(col){ %>
+            <div class="fw-medium small text-uppercase text-secondary mt-3 mb-1"><%= col %></div>
+            <% byCollege[col].forEach(function(p){ const home = c.programme_id === p.id; %>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="programme_ids" value="<%= p.id %>" id="sh<%= c.id %>_<%= p.id %>"
+                       <%= (have.has(p.id) || home) ? 'checked' : '' %> <%= home ? 'disabled' : '' %>>
+                <label class="form-check-label" for="sh<%= c.id %>_<%= p.id %>"><%= p.name %> <span class="text-secondary small">(<%= p.dept_code %>)</span><%= home ? ' — home programme' : '' %></label>
+              </div>
+            <% }) %>
+          <% }) %>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-gold"><i class="fa-solid fa-check me-1"></i> Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+<% }) %>

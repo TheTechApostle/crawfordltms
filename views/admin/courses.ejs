@@ -1,6 +1,9 @@
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
   <div><div class="kicker">Academic structure</div><h1 class="h3 mb-0">Courses</h1></div>
-  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+  <div class="d-flex gap-2 align-items-center">
+    <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+    <a class="btn btn-gold" href="/admin/courses/import"><i class="fa-solid fa-file-arrow-up me-1"></i> Bulk upload</a>
+  </div>
 </div>
 
 <div class="row g-3">
@@ -26,7 +29,7 @@
       <% }) %>
 
       <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-        <thead><tr><th style="min-width:100px;">Code</th><th style="min-width:180px;">Title</th><th>Dept</th><th>Programme</th><th>Level</th><th>Units</th><th>Est. size</th><th>Status</th><th style="min-width:260px;"></th></tr></thead>
+        <thead><tr><th style="min-width:100px;">Code</th><th style="min-width:180px;">Title</th><th>Dept</th><th>Home programme</th><th>Offered by</th><th>Level</th><th>Units</th><th>Est. size</th><th>Status</th><th style="min-width:260px;"></th></tr></thead>
         <tbody>
         <% courses.forEach(function(c){ %>
           <tr>
@@ -46,6 +49,10 @@
                   <option value="<%= p.id %>" <%= c.programme_id === p.id ? 'selected' : '' %>><%= p.name %></option>
                 <% }) %>
               </select>
+            </td>
+            <td>
+              <%- include('../partials/programme-badges', { list: linked[c.id], homeId: c.programme_id, info: scopes[c.id] }) %>
+              <button type="button" class="btn btn-sm btn-link p-0 ms-1" data-bs-toggle="modal" data-bs-target="#shareModal<%= c.id %>" title="Choose the programmes (any college) that offer this course"><i class="fa-solid fa-pen-to-square"></i></button>
             </td>
             <td><input form="edit-course-<%= c.id %>" class="form-control form-control-sm" name="level" type="number" style="width:75px;" value="<%= c.level %>" required></td>
             <td><input form="edit-course-<%= c.id %>" class="form-control form-control-sm" name="credit_units" type="number" style="width:65px;" value="<%= c.credit_units %>"></td>
@@ -94,7 +101,7 @@
         </div>
         <div class="row g-2">
           <div class="col-6 mb-3">
-            <label for="programme_id" class="form-label">Programme</label>
+            <label for="programme_id" class="form-label">Home programme</label>
             <select class="form-select" id="programme_id" name="programme_id">
               <option value="">— none —</option>
               <% programmes.forEach(function(p){ %><option value="<%= p.id %>"><%= p.name %></option><% }) %>
@@ -106,6 +113,7 @@
             <div class="form-text">Lets the assigned lecturer fix their own lecture's time/venue before students register.</div>
           </div>
         </div>
+        <%- include('../partials/scope-fields', { allProgrammes: allProgrammes }) %>
         <button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Add course</button>
       </form>
     </div></div>
@@ -119,13 +127,17 @@
     <p class="text-secondary mb-0">No courses offered yet — click "Offer this session" above.</p>
   <% } else { %>
     <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-      <thead><tr><th>Course</th><th>Lecturer</th><th>Registered</th></tr></thead>
+      <thead><tr><th>Course</th><th>Lecturer</th><th>Allocation</th><th>Registered</th></tr></thead>
       <tbody>
       <% offerings.forEach(function(o){ %>
-        <tr><td><%= o.code %> — <%= o.title %></td><td><%= o.lecturer_name || 'Unassigned (set via HOD)' %></td><td><%= o.registered_count %></td></tr>
+        <tr><td><%= o.code %> — <%= o.title %></td><td><%= o.lecturer_name || 'Unassigned' %></td>
+          <td><span class="badge badge-<%= ({approved:'published',pending:'lecturer_ok',rejected:'rejected',none:'draft'})[o.allocation_status] %>"><%= ({approved:'approved',pending:'awaiting HOD' + (o.proposed_name ? ' (' + o.proposed_name + ')' : ''),rejected:'sent back',none:'not allocated'})[o.allocation_status] %></span></td>
+          <td><%= o.registered_count %></td></tr>
       <% }) %>
       </tbody>
     </table></div>
   <% } %>
 </div></div>
 <% } %>
+
+<%- include('../partials/share-modals', { courses: courses, linked: linked, allProgrammes: allProgrammes, scopes: scopes, actionBase: '/admin/courses', canManage: function(){ return true; } }) %>

@@ -3,6 +3,7 @@ const router = express.Router();
 const { db } = require('../config/db');
 const { requireRole } = require('../middleware/auth');
 const { approve, reject } = require('../services/approvalService');
+const access = require('../services/courseAccess');
 
 router.use(requireRole('dean'));
 
@@ -221,10 +222,12 @@ router.get('/clashes', (req, res) => {
 });
 
 // ---------- Departments overview (all departments under this dean's college) ----------
+// Allocation itself is no longer listed here all in one heap — each department
+// (and programme) links through to its own view on /dean/allocation.
 router.get('/departments', (req, res) => {
   const college = myCollege(req);
   const session = activeSession();
-  let departments = [], lecturersInCharge = [];
+  let departments = [];
 
   if (college) {
     departments = db.prepare(`
@@ -241,32 +244,123 @@ router.get('/departments', (req, res) => {
       WHERE d.college_id = ?
       ORDER BY d.name
     `).all(session ? session.id : 0, college.id);
-
-    if (session) {
-      lecturersInCharge = db.prepare(`
-        SELECT c.code, c.title, d.name AS dept_name, u.name AS lecturer_name, u.email AS lecturer_email,
-               co.registered_count
-        FROM course_offerings co
-        JOIN courses c ON c.id = co.course_id
-        JOIN departments d ON d.id = c.department_id
-        LEFT JOIN users u ON u.id = co.lecturer_id
-        WHERE d.college_id = ? AND co.session_id = ?
-        ORDER BY d.name, c.code
-      `).all(college.id, session.id);
-    }
   }
 
-  res.render('dean/departments', { title: 'Departments', college, session, departments, lecturersInCharge });
+  res.render('dean/departments', { title: 'Departments', college, session, departments });
+});
+
+// ---------- Lecturer allocation (view only) ----------
+// The Dean sees who is allocated to what, one department or programme at a
+// time — never everything in one list — and does not approve it: coordinators
+// propose, the HOD approves. Courses offered by several programmes show up
+// under every programme/department that offers them (including courses owned
+// by another college), marked as shared.
+router.get('/allocation', (req, res) => {
+  const college = myCollege(req);
+  const session = activeSession();
+  if (!college) {
+    return res.render('dean/allocation', { title: 'Lecturer allocation', college, session, departments: [], programmes: [], summary: [], rows: null, deptId: '', progId: '', selected: null });
+  }
+
+  const departments = db.prepare('SELECT * FROM departments WHERE college_id = ? ORDER BY name').all(college.id);
+  const programmes = db.prepare(`
+    SELECT p.*, d.name AS dept_name, cu.name AS coordinator_name
+    FROM programmes p JOIN departments d ON d.id = p.department_id
+    LEFT JOIN users cu ON cu.id = p.coordinator_id
+    WHERE d.college_id = ? ORDER BY d.name, p.name
+  `).all(college.id);
+
+  // Only accept a department/programme filter that is really in this college.
+  const deptId = departments.find(d => String(d.id) === String(req.query.department_id)) ? Number(req.query.department_id) : '';
+  const prog = programmes.find(p => String(p.id) === String(req.query.programme_id));
+  const progId = prog ? prog.id : '';
+  const effectiveDept = prog ? prog.department_id : deptId;
+
+  // Every offering this session of a course that belongs to, or is shared
+  // into, this college — one pass, then sliced per department/programme below.
+  let all = [];
+  if (session) {
+    all = db.prepare(`
+      SELECT co.id, co.registered_count, co.allocation_status, co.allocation_reason, co.allocation_updated_at,
+             c.id AS course_id, c.code, c.title, c.level, c.department_id AS home_dept_id, c.programme_id AS home_programme_id,
+             d.name AS home_dept_name, hc.name AS home_college_name, hc.id AS home_college_id,
+             lu.name AS lecturer_name, lu.email AS lecturer_email, pu.name AS proposed_name, bu.name AS allocated_by,
+             (SELECT te.status FROM timetable_entries te WHERE te.offering_id = co.id AND te.status != 'rejected'
+              ORDER BY te.id DESC LIMIT 1) AS entry_status
+      FROM course_offerings co
+      JOIN courses c ON c.id = co.course_id
+      JOIN departments d ON d.id = c.department_id
+      LEFT JOIN colleges hc ON hc.id = d.college_id
+      LEFT JOIN users lu ON lu.id = co.lecturer_id
+      LEFT JOIN users pu ON pu.id = co.proposed_lecturer_id
+      LEFT JOIN users bu ON bu.id = co.allocation_by
+      WHERE co.session_id = ?
+        AND (d.college_id = ? OR EXISTS (
+              SELECT 1 FROM course_programmes cp
+              JOIN programmes p ON p.id = cp.programme_id
+              JOIN departments pd ON pd.id = p.department_id
+              WHERE cp.course_id = c.id AND pd.college_id = ?))
+      ORDER BY c.level, c.code
+    `).all(session.id, college.id, college.id);
+    const links = access.programmesByCourse(all.map(o => o.course_id));
+    const scopes = access.scopesByCourse(all.map(o => o.course_id));
+    all.forEach(o => {
+      o.info = scopes[o.course_id];
+      o.programmes = links[o.course_id] || [];
+      // Which of THIS college's departments/programmes offer the course.
+      o.inDepts = new Set([o.home_college_id === college.id ? o.home_dept_id : null, ...o.programmes.filter(l => l.college_id === college.id).map(l => l.dept_id)].filter(Boolean));
+      o.inProgs = new Set(o.programmes.filter(l => l.college_id === college.id).map(l => l.programme_id));
+      o.shared = o.programmes.length > 1 || o.home_college_id !== college.id;
+    });
+  }
+
+  // Overview (no filter chosen): counts per department and programme only.
+  const tally = list => ({
+    total: list.length,
+    approved: list.filter(o => o.allocation_status === 'approved').length,
+    pending: list.filter(o => o.allocation_status === 'pending').length,
+    rejected: list.filter(o => o.allocation_status === 'rejected').length,
+    none: list.filter(o => o.allocation_status === 'none').length,
+  });
+  const summary = departments.map(d => ({
+    dept: d,
+    ...tally(all.filter(o => o.inDepts.has(d.id))),
+    programmes: programmes.filter(p => p.department_id === d.id).map(p => ({ prog: p, ...tally(all.filter(o => o.inProgs.has(p.id))) })),
+  }));
+
+  let rows = null, selected = null;
+  if (progId) {
+    rows = all.filter(o => o.inProgs.has(progId));
+    selected = { type: 'programme', name: prog.name, dept_name: prog.dept_name, coordinator_name: prog.coordinator_name };
+  } else if (deptId) {
+    rows = all.filter(o => o.inDepts.has(deptId));
+    selected = { type: 'department', name: departments.find(d => d.id === deptId).name };
+  }
+
+  res.render('dean/allocation', { title: 'Lecturer allocation', college, session, departments, programmes, summary, rows, deptId: effectiveDept, progId, selected });
 });
 
 // ---------- College-wide timetable ----------
+// Filterable by department or programme so a Dean isn't stuck with one giant
+// grid. Courses shared in from other programmes/colleges are included.
 router.get('/timetable', (req, res) => {
   const college = myCollege(req);
   const session = activeSession();
   const bands = db.prepare('SELECT DISTINCT start_time, end_time FROM timeslots ORDER BY start_time').all();
-  let entries = [];
+  let entries = [], departments = [], programmes = [];
+  let deptId = '', progId = '';
+  if (college) {
+    departments = db.prepare('SELECT * FROM departments WHERE college_id = ? ORDER BY name').all(college.id);
+    programmes = db.prepare(`
+      SELECT p.* FROM programmes p JOIN departments d ON d.id = p.department_id
+      WHERE d.college_id = ? ORDER BY p.name
+    `).all(college.id);
+    const prog = programmes.find(p => String(p.id) === String(req.query.programme_id));
+    if (prog) progId = prog.id;
+    else if (departments.find(d => String(d.id) === String(req.query.department_id))) deptId = Number(req.query.department_id);
+  }
   if (college && session) {
-    entries = db.prepare(`
+    let sql = `
       SELECT te.*, c.code, c.title, d.name AS dept_name,
              u.name AS lecturer_name, v.name AS venue_name, v.capacity,
              ts.day, ts.start_time, ts.end_time, co.registered_count
@@ -277,10 +371,27 @@ router.get('/timetable', (req, res) => {
       LEFT JOIN users u ON u.id = co.lecturer_id
       LEFT JOIN venues v ON v.id = te.venue_id
       LEFT JOIN timeslots ts ON ts.id = te.timeslot_id
-      WHERE co.session_id = ? AND d.college_id = ? AND te.status != 'rejected' AND te.timeslot_id IS NOT NULL
-    `).all(session.id, college.id);
+      WHERE co.session_id = ? AND te.status != 'rejected' AND te.timeslot_id IS NOT NULL
+    `;
+    const params = [session.id];
+    if (progId) {
+      sql += ' AND EXISTS (SELECT 1 FROM course_programmes cp WHERE cp.course_id = c.id AND cp.programme_id = ?)';
+      params.push(progId);
+    } else if (deptId) {
+      sql += ` AND (c.department_id = ? OR EXISTS (
+                 SELECT 1 FROM course_programmes cp JOIN programmes p ON p.id = cp.programme_id
+                 WHERE cp.course_id = c.id AND p.department_id = ?))`;
+      params.push(deptId, deptId);
+    } else {
+      sql += ` AND (d.college_id = ? OR EXISTS (
+                 SELECT 1 FROM course_programmes cp JOIN programmes p ON p.id = cp.programme_id
+                 JOIN departments pd ON pd.id = p.department_id
+                 WHERE cp.course_id = c.id AND pd.college_id = ?))`;
+      params.push(college.id, college.id);
+    }
+    entries = db.prepare(sql).all(...params);
   }
-  res.render('dean/timetable', { title: 'College timetable', college, session, entries, bands });
+  res.render('dean/timetable', { title: 'College timetable', college, session, entries, bands, departments, programmes, deptId, progId });
 });
 
 module.exports = router;

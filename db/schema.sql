@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   name          TEXT NOT NULL,
   email         TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
-  role          TEXT NOT NULL CHECK (role IN ('admin','dean','hod','lecturer','student')),
+  role          TEXT NOT NULL CHECK (role IN ('admin','dean','hod','coordinator','lecturer','student')),
   department_id INTEGER REFERENCES departments(id),
   college_id    INTEGER REFERENCES colleges(id), -- a Dean's own college
   level         INTEGER,                 -- for students, e.g. 100/200/300/400
@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS programmes (
   name          TEXT NOT NULL,
   code          TEXT NOT NULL,
   department_id INTEGER NOT NULL REFERENCES departments(id),
+  coordinator_id INTEGER REFERENCES users(id), -- the Programme Coordinator; NULL = no coordinator, so the HOD handles courses/allocation
   UNIQUE(department_id, code)
 );
 
@@ -61,14 +62,20 @@ CREATE TABLE IF NOT EXISTS courses (
   status                TEXT NOT NULL DEFAULT 'pending'
                         CHECK (status IN ('pending','approved','rejected')),
   reject_reason         TEXT,
-  created_by            INTEGER REFERENCES users(id) -- who proposed it (HOD) or added it directly (registrar)
+  created_by            INTEGER REFERENCES users(id), -- who proposed it (HOD) or added it directly (registrar)
+  -- Who the course is offered to: 'programmes' = the programmes listed in
+  -- course_programmes; 'departments' = every programme of the departments in
+  -- course_departments (plus any listed programmes); 'all' = every programme
+  -- in the university (e.g. GST courses).
+  scope                 TEXT NOT NULL DEFAULT 'programmes' CHECK (scope IN ('programmes','departments','all'))
 );
 
 CREATE TABLE IF NOT EXISTS venues (
   id        INTEGER PRIMARY KEY AUTOINCREMENT,
   name      TEXT NOT NULL,
   building  TEXT,
-  capacity  INTEGER NOT NULL
+  capacity  INTEGER NOT NULL,
+  college_id INTEGER REFERENCES colleges(id) -- owning college; NULL = shared / university-wide venue
 );
 
 CREATE TABLE IF NOT EXISTS timeslots (
@@ -88,7 +95,43 @@ CREATE TABLE IF NOT EXISTS course_offerings (
                               -- aren't stuck waiting on the HOD's course-level
                               -- estimate (or on registration finishing) before
                               -- fixing their own lecture's time/venue
+  -- Lecturer allocation workflow. lecturer_id is always the *approved*
+  -- lecturer (everything downstream - timetable, lecturer portal - keeps
+  -- reading it). A Programme Coordinator's choice sits in
+  -- proposed_lecturer_id until the HOD approves it, at which point it is
+  -- copied into lecturer_id. An HOD (or the registrar) allocating directly
+  -- writes lecturer_id and is approved immediately.
+  proposed_lecturer_id INTEGER REFERENCES users(id),
+  allocation_status    TEXT NOT NULL DEFAULT 'none'
+                       CHECK (allocation_status IN ('none','pending','approved','rejected')),
+  allocation_by        INTEGER REFERENCES users(id),
+  allocation_reason    TEXT,   -- HOD's reason when an allocation is rejected
+  allocation_updated_at TEXT,
   UNIQUE(course_id, session_id)
+);
+
+-- A course can be offered by several programmes (and so several colleges):
+-- e.g. a GST / MTH / STA service course taken by Computer Science, ICT,
+-- Engineering... courses.department_id is the *owning* department (the one
+-- that proposes it and allocates its lecturer); this table lists every
+-- programme the course is offered under, owner's programme(s) included.
+-- The colleges a course serves are derived: programme -> department -> college.
+CREATE TABLE IF NOT EXISTS course_programmes (
+  course_id    INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  programme_id INTEGER NOT NULL REFERENCES programmes(id),
+  level        INTEGER,   -- optional: level at which THIS programme takes the course, if it differs
+  linked_by    INTEGER REFERENCES users(id),
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  source       TEXT NOT NULL DEFAULT 'manual',  -- 'manual' = picked/home; 'scope' = derived from courses.scope (re-synced automatically)
+  PRIMARY KEY (course_id, programme_id)
+);
+
+-- Departments a course is offered to as a whole (courses.scope = 'departments'):
+-- every programme in those departments, including ones added later.
+CREATE TABLE IF NOT EXISTS course_departments (
+  course_id     INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  department_id INTEGER NOT NULL REFERENCES departments(id),
+  PRIMARY KEY (course_id, department_id)
 );
 
 CREATE TABLE IF NOT EXISTS enrollments (

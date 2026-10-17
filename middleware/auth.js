@@ -24,7 +24,18 @@ function requireRole(...roles) {
 function exposeUser(req, res, next) {
   res.locals.user = req.session.user || null;
   res.locals.path = req.path;
+  // One-shot flash message (set via flash() below, shown once by layout.ejs).
+  if (req.session.flash) {
+    res.locals.flash = req.session.flash;
+    delete req.session.flash;
+  }
   next();
 }
 
-module.exports = { requireLogin, requireRole, exposeUser };
+// Queue a message to show on the next page the user lands on, e.g.
+//   flash(req, 'error', 'That code is already in use.')
+function flash(req, type, message) {
+  req.session.flash = { type, message };
+}
+
+module.exports = { requireLogin, requireRole, exposeUser, flash };
