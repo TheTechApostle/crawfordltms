@@ -679,22 +679,68 @@ router.post('/publish/:entryId', (req, res) => {
 // CSV (name,email,department_code,level[,password]) alongside normal
 // self-signup at /register/student, and correct any student's details
 // (name, email, department, level, password reset) or remove the account.
-function studentList() {
-  return db.prepare(`
-    SELECT u.*, d.name AS dept_name FROM users u
-    LEFT JOIN departments d ON d.id = u.department_id
-    WHERE u.role = 'student' ORDER BY u.created_at DESC, u.id DESC
-  `).all();
+// Where to land after a student action: back on the same page/filters the admin was looking at.
+function studentsBack(req) {
+  const r = req.body && req.body.return_to;
+  return (typeof r === 'string' && r.startsWith('/admin/students') && !r.startsWith('//')) ? r : '/admin/students';
 }
 
-router.get('/students', (req, res) => {
+// Table with search, department/level filters and pagination. Rows open a
+// modal for editing; everything else is a server-side page so it stays fast
+// with thousands of students.
+function renderStudents(req, res, result) {
+  const q = (req.query.q || '').trim();
+  const deptId = req.query.department_id ? Number(req.query.department_id) : '';
+  const level = req.query.level ? Number(req.query.level) : '';
+  const per = [10, 25, 50, 100].includes(Number(req.query.per)) ? Number(req.query.per) : 25;
+
+  const where = ["u.role = 'student'"]; const params = [];
+  if (q) { where.push('(u.name LIKE ? OR u.email LIKE ?)'); params.push(`%${q}%`, `%${q}%`); }
+  if (deptId) { where.push('u.department_id = ?'); params.push(deptId); }
+  if (level) { where.push('u.level = ?'); params.push(level); }
+  const W = where.join(' AND ');
+
+  const total = db.prepare(`SELECT COUNT(*) c FROM users u WHERE ${W}`).get(...params).c;
+  const pages = Math.max(1, Math.ceil(total / per));
+  const page = Math.min(Math.max(1, Number(req.query.page) || 1), pages);
+
+  const students = db.prepare(`
+    SELECT u.id, u.name, u.email, u.department_id, u.level, u.created_at, d.name AS dept_name, d.code AS dept_code,
+           (SELECT COUNT(*) FROM enrollments e WHERE e.student_id = u.id) AS enrollment_count
+    FROM users u LEFT JOIN departments d ON d.id = u.department_id
+    WHERE ${W}
+    ORDER BY u.name COLLATE NOCASE
+    LIMIT ? OFFSET ?
+  `).all(...params, per, (page - 1) * per);
+
+  // Registered courses for the students on this page (shown in their modal).
+  const courses = {};
+  if (students.length) {
+    db.prepare(`
+      SELECT e.student_id, c.code, s.name AS session_name
+      FROM enrollments e
+      JOIN course_offerings co ON co.id = e.offering_id
+      JOIN courses c ON c.id = co.course_id
+      JOIN academic_sessions s ON s.id = co.session_id
+      WHERE e.student_id IN (${students.map(() => '?').join(',')})
+      ORDER BY s.id DESC, c.code
+    `).all(...students.map(s => s.id)).forEach(r => { (courses[r.student_id] = courses[r.student_id] || []).push(`${r.code} (${r.session_name})`); });
+  }
+  students.forEach(s => { s.courses = courses[s.id] || []; });
+
   const departments = db.prepare('SELECT * FROM departments ORDER BY name').all();
-  res.render('admin/students', { title: 'Students', students: studentList(), departments, result: null });
-});
+  const levels = db.prepare("SELECT DISTINCT level FROM users WHERE role = 'student' AND level IS NOT NULL ORDER BY level").all().map(r => r.level);
+  res.render('admin/students', {
+    title: 'Students', students, departments, levels, result: result || null,
+    filters: { q, deptId, level, per }, pager: { page, pages, total, per, from: total ? (page - 1) * per + 1 : 0, to: Math.min(page * per, total) },
+  });
+}
+
+router.get('/students', (req, res) => renderStudents(req, res, null));
 
 router.post('/students', (req, res) => {
   const { name, email, department_id, level, password } = req.body;
-  attempt(req, res, '/admin/students', 'Student added.', () => {
+  attempt(req, res, studentsBack(req), 'Student added.', () => {
     const pw = password && password.length >= 8 ? password : 'password123';
     if (!(name || '').trim() || !(email || '').trim() || !department_id || !level) {
       flash(req, 'error', 'Name, email, department and level are all required.'); return false;
@@ -706,7 +752,7 @@ router.post('/students', (req, res) => {
 
 router.post('/students/:id/edit', (req, res) => {
   const { name, email, department_id, level, new_password } = req.body;
-  attempt(req, res, '/admin/students', 'Student details updated.', () => {
+  attempt(req, res, studentsBack(req), 'Student details updated.', () => {
     const stu = db.prepare("SELECT * FROM users WHERE id = ? AND role = 'student'").get(req.params.id);
     if (!stu) return false;
     if (!(name || '').trim() || !(email || '').trim() || !department_id || !level) {
@@ -756,14 +802,11 @@ router.post('/students/import', (req, res) => {
     created.push({ name, email });
   });
 
-  res.render('admin/students', {
-    title: 'Students', students: studentList(), departments,
-    result: { created, errors, defaultPassword: pw },
-  });
+  renderStudents(req, res, { created, errors, defaultPassword: pw });
 });
 
 router.post('/students/:id/delete', (req, res) => {
-  attempt(req, res, '/admin/students', 'Student account removed.', () => {
+  attempt(req, res, studentsBack(req), 'Student account removed.', () => {
     const hasEnrollments = db.prepare('SELECT 1 FROM enrollments WHERE student_id = ?').get(req.params.id);
     if (hasEnrollments) { flash(req, 'error', 'That student is registered for courses this session, so the account can\'t be removed.'); return false; }
     db.prepare("DELETE FROM users WHERE id = ? AND role = 'student'").run(req.params.id);

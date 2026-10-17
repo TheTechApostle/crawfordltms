@@ -1,97 +1,232 @@
+<%
+  // Keep the current search/filters/page in every link and form so actions return here.
+  function qs(over) {
+    const o = Object.assign({ q: filters.q, department_id: filters.deptId, level: filters.level, per: filters.per, page: pager.page }, over || {});
+    const parts = [];
+    Object.keys(o).forEach(function(k){ if (o[k] !== '' && o[k] !== undefined && o[k] !== null) parts.push(k + '=' + encodeURIComponent(o[k])); });
+    return parts.length ? '?' + parts.join('&') : '';
+  }
+  const returnTo = '/admin/students' + qs();
+%>
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
   <div><div class="kicker">Academic structure</div><h1 class="h3 mb-0">Students</h1></div>
+  <div class="d-flex gap-2">
+    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#importModal"><i class="fa-solid fa-file-import me-1"></i> Bulk import</button>
+    <button type="button" class="btn btn-gold" data-bs-toggle="modal" data-bs-target="#addModal"><i class="fa-solid fa-user-plus me-1"></i> Add student</button>
+  </div>
 </div>
 
-<div class="row g-3">
-  <div class="col-lg-7">
-    <div class="card h-100"><div class="card-body">
-      <h2 class="h6 card-title"><i class="fa-solid fa-user-graduate me-1 text-secondary"></i> All students (<%= students.length %>)</h2>
-      <p class="text-secondary small">Students can also create their own account at <code>/register/student</code> — self-signup and this bulk import are both available side by side.</p>
+<% if (result) { %>
+  <div class="card mb-3"><div class="card-body">
+    <h2 class="h6 card-title"><i class="fa-solid fa-file-import me-1 text-secondary"></i> Import result</h2>
+    <p class="mb-1"><span class="badge badge-published"><%= result.created.length %> created</span>
+      <% if (result.errors.length) { %><span class="badge badge-rejected"><%= result.errors.length %> skipped</span><% } %></p>
+    <% if (result.created.length) { %><p class="form-text mb-1">Password for all newly created accounts: <code><%= result.defaultPassword %></code></p><% } %>
+    <% if (result.errors.length) { %><ul class="small text-secondary mb-0"><% result.errors.forEach(function(e){ %><li><%= e %></li><% }) %></ul><% } %>
+  </div></div>
+<% } %>
 
-      <% students.forEach(function(s){ %>
-        <form id="edit-student-<%= s.id %>" method="POST" action="/admin/students/<%= s.id %>/edit"></form>
-        <form id="delete-student-<%= s.id %>" method="POST" action="/admin/students/<%= s.id %>/delete"></form>
+<div class="card"><div class="card-body">
+  <form method="GET" action="/admin/students" class="row g-2 align-items-end mb-3">
+    <div class="col-md-4">
+      <label class="form-label" for="f_q">Search</label>
+      <input class="form-control" id="f_q" name="q" value="<%= filters.q %>" placeholder="Name or email">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="f_dept">Department</label>
+      <select class="form-select" id="f_dept" name="department_id" onchange="this.form.submit()">
+        <option value="">All departments</option>
+        <% departments.forEach(function(d){ %><option value="<%= d.id %>" <%= String(filters.deptId) === String(d.id) ? 'selected' : '' %>><%= d.name %></option><% }) %>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" for="f_level">Level</label>
+      <select class="form-select" id="f_level" name="level" onchange="this.form.submit()">
+        <option value="">All</option>
+        <% levels.forEach(function(l){ %><option value="<%= l %>" <%= String(filters.level) === String(l) ? 'selected' : '' %>><%= l %></option><% }) %>
+      </select>
+    </div>
+    <div class="col-md-1">
+      <label class="form-label" for="f_per">Rows</label>
+      <select class="form-select" id="f_per" name="per" onchange="this.form.submit()">
+        <% [10,25,50,100].forEach(function(n){ %><option value="<%= n %>" <%= filters.per === n ? 'selected' : '' %>><%= n %></option><% }) %>
+      </select>
+    </div>
+    <div class="col-md-2 d-flex gap-2">
+      <button class="btn btn-gold" type="submit"><i class="fa-solid fa-magnifying-glass me-1"></i> Search</button>
+      <% if (filters.q || filters.deptId || filters.level) { %><a class="btn btn-outline-secondary" href="/admin/students" title="Clear filters"><i class="fa-solid fa-xmark"></i></a><% } %>
+    </div>
+  </form>
+
+  <% if (!students.length) { %>
+    <div class="text-center py-4 text-secondary"><i class="fa-solid fa-user-graduate fa-2x mb-2 d-block"></i><%= (filters.q || filters.deptId || filters.level) ? 'No students match those filters.' : 'No students yet.' %></div>
+  <% } else { %>
+    <p class="text-secondary small mb-2">Click a student to view, edit, reset their password or remove the account.</p>
+    <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+      <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Department</th><th>Level</th><th class="text-center">Courses</th><th>Joined</th><th></th></tr></thead>
+      <tbody>
+      <% students.forEach(function(s, i){ %>
+        <tr class="student-row" role="button" tabindex="0" style="cursor:pointer;"
+            data-student="<%= JSON.stringify({ id: s.id, name: s.name, email: s.email, department_id: s.department_id, level: s.level, created_at: s.created_at, courses: s.courses }) %>">
+          <td class="text-secondary"><%= pager.from + i %></td>
+          <td class="fw-medium"><%= s.name %></td>
+          <td><%= s.email %></td>
+          <td><%= s.dept_name || '—' %></td>
+          <td><%= s.level || '—' %></td>
+          <td class="text-center"><span class="badge bg-light text-dark border"><%= s.enrollment_count %></span></td>
+          <td class="text-secondary small"><%= (s.created_at || '').slice(0, 10) %></td>
+          <td class="text-end text-secondary"><i class="fa-solid fa-chevron-right"></i></td>
+        </tr>
       <% }) %>
+      </tbody>
+    </table></div>
 
-      <% if (!students.length) { %>
-        <p class="text-secondary mb-0">No students yet.</p>
-      <% } else { %>
-        <div class="table-responsive" style="max-height:520px; overflow-y:auto;"><table class="table table-hover align-middle mb-0">
-          <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Level</th><th>New password</th><th style="min-width:150px;"></th></tr></thead>
-          <tbody>
-          <% students.forEach(function(s){ %>
-            <tr>
-              <td><input form="edit-student-<%= s.id %>" class="form-control form-control-sm" name="name" value="<%= s.name %>" required></td>
-              <td><input form="edit-student-<%= s.id %>" class="form-control form-control-sm" type="email" name="email" value="<%= s.email %>" required></td>
-              <td>
-                <select form="edit-student-<%= s.id %>" class="form-select form-select-sm" name="department_id" required>
-                  <% departments.forEach(function(d){ %><option value="<%= d.id %>" <%= s.department_id === d.id ? 'selected' : '' %>><%= d.name %></option><% }) %>
-                </select>
-              </td>
-              <td><input form="edit-student-<%= s.id %>" class="form-control form-control-sm" name="level" type="number" value="<%= s.level || '' %>" style="width:80px;" required></td>
-              <td><input form="edit-student-<%= s.id %>" class="form-control form-control-sm" name="new_password" type="password" autocomplete="new-password" placeholder="unchanged" style="width:120px;"></td>
-              <td class="d-flex gap-2">
-                <button form="edit-student-<%= s.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
-                <button form="delete-student-<%= s.id %>" class="btn btn-sm btn-outline-danger" type="submit" data-confirm="Remove this student account?"><i class="fa-solid fa-trash"></i></button>
-              </td>
-            </tr>
-          <% }) %>
-          </tbody>
-        </table></div>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+      <div class="text-secondary small">Showing <%= pager.from %>–<%= pager.to %> of <%= pager.total %> student<%= pager.total === 1 ? '' : 's' %></div>
+      <% if (pager.pages > 1) { %>
+      <nav aria-label="Students pages"><ul class="pagination pagination-sm mb-0">
+        <li class="page-item <%= pager.page === 1 ? 'disabled' : '' %>"><a class="page-link" href="/admin/students<%= qs({ page: pager.page - 1 }) %>">&laquo;</a></li>
+        <%
+          const win = []; for (let n = 1; n <= pager.pages; n++) { if (n === 1 || n === pager.pages || Math.abs(n - pager.page) <= 2) win.push(n); }
+          let last = 0;
+        %>
+        <% win.forEach(function(n){ %>
+          <% if (last && n - last > 1) { %><li class="page-item disabled"><span class="page-link">…</span></li><% } %>
+          <li class="page-item <%= n === pager.page ? 'active' : '' %>"><a class="page-link" href="/admin/students<%= qs({ page: n }) %>"><%= n %></a></li>
+          <% last = n; %>
+        <% }) %>
+        <li class="page-item <%= pager.page === pager.pages ? 'disabled' : '' %>"><a class="page-link" href="/admin/students<%= qs({ page: pager.page + 1 }) %>">&raquo;</a></li>
+      </ul></nav>
       <% } %>
-    </div></div>
-  </div>
+    </div>
+  <% } %>
+</div></div>
 
-  <div class="col-lg-5">
-    <div class="card mb-3"><div class="card-body">
-      <h2 class="h6 card-title"><i class="fa-solid fa-user-plus me-1 text-secondary"></i> Add one student</h2>
-      <form method="POST" action="/admin/students">
+<%# ---------- Student modal: view / edit / reset password / remove ---------- %>
+<div class="modal fade" id="studentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title h6"><i class="fa-solid fa-user-graduate me-1"></i> <span id="sm_title">Student</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="studentEditForm" method="POST" action="">
+          <input type="hidden" name="return_to" value="<%= returnTo %>">
+          <div class="mb-3"><label class="form-label" for="sm_name">Full name</label><input class="form-control" id="sm_name" name="name" required></div>
+          <div class="mb-3"><label class="form-label" for="sm_email">Email</label><input class="form-control" id="sm_email" name="email" type="email" required></div>
+          <div class="row g-2">
+            <div class="col-8 mb-3"><label class="form-label" for="sm_dept">Department</label>
+              <select class="form-select" id="sm_dept" name="department_id" required>
+                <% departments.forEach(function(d){ %><option value="<%= d.id %>"><%= d.name %></option><% }) %>
+              </select></div>
+            <div class="col-4 mb-3"><label class="form-label" for="sm_level">Level</label><input class="form-control" id="sm_level" name="level" type="number" required></div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="sm_pw">Reset password <span class="text-secondary small">(optional)</span></label>
+            <input class="form-control" id="sm_pw" name="new_password" type="password" autocomplete="new-password" placeholder="Leave blank to keep the current password">
+            <div class="form-text">At least 8 characters. Tell the student their new password.</div>
+          </div>
+        </form>
+        <div class="border-top pt-3">
+          <div class="fw-medium small text-uppercase text-secondary mb-1">Registered courses</div>
+          <div id="sm_courses" class="d-flex flex-wrap gap-1"></div>
+          <div class="text-secondary small mt-2">Joined <span id="sm_joined">—</span></div>
+        </div>
+        <form id="studentDeleteForm" method="POST" action=""><input type="hidden" name="return_to" value="<%= returnTo %>"></form>
+      </div>
+      <div class="modal-footer justify-content-between">
+        <button form="studentDeleteForm" type="submit" class="btn btn-outline-danger" data-confirm="Remove this student account? This can't be undone."><i class="fa-solid fa-trash me-1"></i> Remove</button>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+          <button form="studentEditForm" type="submit" class="btn btn-gold"><i class="fa-solid fa-check me-1"></i> Save changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%# ---------- Add one student ---------- %>
+<div class="modal fade" id="addModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form class="modal-content" method="POST" action="/admin/students">
+      <input type="hidden" name="return_to" value="<%= returnTo %>">
+      <div class="modal-header"><h5 class="modal-title h6"><i class="fa-solid fa-user-plus me-1"></i> Add a student</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <div class="modal-body">
+        <div class="mb-3"><label class="form-label" for="a_name">Full name</label><input class="form-control" id="a_name" name="name" required></div>
+        <div class="mb-3"><label class="form-label" for="a_email">Email</label><input class="form-control" id="a_email" name="email" type="email" required></div>
         <div class="row g-2">
-          <div class="col-md-6 mb-2"><label class="form-label" for="s_name">Name</label><input class="form-control" id="s_name" name="name" required></div>
-          <div class="col-md-6 mb-2"><label class="form-label" for="s_email">Email</label><input class="form-control" id="s_email" name="email" type="email" required></div>
-          <div class="col-md-6 mb-2"><label class="form-label" for="s_dept">Department</label>
-            <select class="form-select" id="s_dept" name="department_id" required><% departments.forEach(function(d){ %><option value="<%= d.id %>"><%= d.name %></option><% }) %></select></div>
-          <div class="col-md-3 mb-2"><label class="form-label" for="s_level">Level</label><input class="form-control" id="s_level" name="level" type="number" required placeholder="300"></div>
-          <div class="col-md-3 mb-2"><label class="form-label" for="s_pw">Password</label><input class="form-control" id="s_pw" name="password" placeholder="password123"></div>
+          <div class="col-8 mb-3"><label class="form-label" for="a_dept">Department</label>
+            <select class="form-select" id="a_dept" name="department_id" required><% departments.forEach(function(d){ %><option value="<%= d.id %>"><%= d.name %></option><% }) %></select></div>
+          <div class="col-4 mb-3"><label class="form-label" for="a_level">Level</label><input class="form-control" id="a_level" name="level" type="number" required placeholder="300"></div>
         </div>
-        <button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Add student</button>
-      </form>
-    </div></div>
-    <div class="card"><div class="card-body">
-      <h2 class="h6 card-title"><i class="fa-solid fa-file-import me-1 text-secondary"></i> Bulk import</h2>
-      <p class="text-secondary small">Paste one student per line: <code>name,email,department_code,level</code></p>
-      <form method="POST" action="/admin/students/import">
-        <div class="mb-3">
-          <textarea class="form-control font-monospace" name="csv" rows="8" placeholder="Blessing Okonkwo,blessing.o@crawford.edu.ng,CSC,300
-David Eze,david.e@crawford.edu.ng,CSC,300" required></textarea>
-        </div>
+        <div class="mb-1"><label class="form-label" for="a_pw">Password</label><input class="form-control" id="a_pw" name="password" placeholder="password123 (min. 8 characters)"></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Add student</button></div>
+    </form>
+  </div>
+</div>
+
+<%# ---------- Bulk import ---------- %>
+<div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <form class="modal-content" method="POST" action="/admin/students/import">
+      <div class="modal-header"><h5 class="modal-title h6"><i class="fa-solid fa-file-import me-1"></i> Bulk import students</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+      <div class="modal-body">
+        <p class="text-secondary small">One student per line: <code>name,email,department_code,level</code>. Students can also sign up themselves at <code>/register/student</code>.</p>
+        <div class="mb-3"><label class="form-label" for="i_file">CSV file <span class="text-secondary small">(optional — loads into the box below)</span></label><input class="form-control" type="file" id="i_file" accept=".csv,text/csv,text/plain"></div>
+        <div class="mb-3"><textarea class="form-control font-monospace" id="i_csv" name="csv" rows="8" required placeholder="Blessing Okonkwo,blessing.o@crawford.edu.ng,CSC,300&#10;David Eze,david.e@crawford.edu.ng,CSC,300"></textarea></div>
         <div class="mb-3">
           <label for="default_password" class="form-label">Default password</label>
           <input class="form-control" id="default_password" name="default_password" placeholder="password123 (min. 8 characters)">
-          <div class="form-text">Applied to every imported account — share it with students so they can sign in and change it.</div>
+          <div class="form-text">Applied to every imported account.</div>
         </div>
-        <div class="mb-3">
-          <label class="form-label">Department codes</label>
-          <div class="d-flex flex-wrap gap-1">
-            <% departments.forEach(function(d){ %><span class="badge bg-light text-dark border font-monospace"><%= d.code %></span><% }) %>
-          </div>
-        </div>
-        <button class="btn btn-gold" type="submit"><i class="fa-solid fa-file-import me-1"></i> Import students</button>
-      </form>
-
-      <% if (result) { %>
-        <hr>
-        <p class="mb-1"><span class="badge badge-published"><%= result.created.length %> created</span>
-          <% if (result.errors.length) { %><span class="badge badge-rejected"><%= result.errors.length %> skipped</span><% } %></p>
-        <% if (result.created.length) { %>
-          <p class="form-text mb-1">Password for all newly created accounts: <code><%= result.defaultPassword %></code></p>
-        <% } %>
-        <% if (result.errors.length) { %>
-          <ul class="small text-secondary mb-0">
-            <% result.errors.forEach(function(e){ %><li><%= e %></li><% }) %>
-          </ul>
-        <% } %>
-      <% } %>
-    </div></div>
+        <div class="d-flex flex-wrap gap-1"><span class="small text-secondary me-1">Department codes:</span><% departments.forEach(function(d){ %><span class="badge bg-light text-dark border font-monospace"><%= d.code %></span><% }) %></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-gold" type="submit"><i class="fa-solid fa-file-import me-1"></i> Import students</button></div>
+    </form>
   </div>
 </div>
+
+<script>
+  // Runs after the page's scripts (Bootstrap loads after this markup).
+  document.addEventListener('DOMContentLoaded', function () {
+    var modalEl = document.getElementById('studentModal');
+    var modal = new bootstrap.Modal(modalEl);
+    function openStudent(row) {
+      var s = JSON.parse(row.getAttribute('data-student'));
+      document.getElementById('sm_title').textContent = s.name;
+      document.getElementById('studentEditForm').action = '/admin/students/' + s.id + '/edit';
+      document.getElementById('studentDeleteForm').action = '/admin/students/' + s.id + '/delete';
+      document.getElementById('sm_name').value = s.name;
+      document.getElementById('sm_email').value = s.email;
+      document.getElementById('sm_dept').value = s.department_id;
+      document.getElementById('sm_level').value = s.level || '';
+      document.getElementById('sm_pw').value = '';
+      document.getElementById('sm_joined').textContent = (s.created_at || '').slice(0, 10) || '—';
+      var box = document.getElementById('sm_courses');
+      box.innerHTML = '';
+      if (!s.courses.length) {
+        box.innerHTML = '<span class="text-secondary small">Not registered for any course yet.</span>';
+      } else {
+        s.courses.forEach(function (c) {
+          var b = document.createElement('span');
+          b.className = 'badge bg-light text-dark border fw-normal';
+          b.textContent = c;
+          box.appendChild(b);
+        });
+      }
+      modal.show();
+    }
+    document.querySelectorAll('.student-row').forEach(function (row) {
+      row.addEventListener('click', function () { openStudent(row); });
+      row.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openStudent(row); } });
+    });
+    document.getElementById('i_file').addEventListener('change', function (e) {
+      var f = e.target.files[0]; if (!f) return;
+      var r = new FileReader();
+      r.onload = function () { document.getElementById('i_csv').value = r.result; };
+      r.readAsText(f);
+    });
+  });
+</script>
