@@ -1,30 +1,69 @@
-<%# "Offered to" controls for add-course forms: who takes this course.
-    Needs `allProgrammes`. Posts scope, department_ids[], programme_ids[]. %>
+<%# "Offered to" picker for add-course forms — same look as the "Programmes
+    offering…" popup: choose the scope, then tick any number of programmes
+    (grouped by college) or whole departments. Posts scope, department_ids[]
+    and programme_ids[]. Needs `allProgrammes`; optional `homeProgrammeId`
+    (shown ticked and locked, e.g. the coordinator's own programme). %>
 <%
-  const depts = []; const seen = {};
-  allProgrammes.forEach(function(p){ if (!seen[p.dept_id]) { seen[p.dept_id] = 1; depts.push(p); } });
+  const uid = 'sf' + Math.random().toString(36).slice(2, 8);
+  const home = (typeof homeProgrammeId !== 'undefined') ? homeProgrammeId : null;
+  const byCollege = {}, deptsByCollege = {};
+  allProgrammes.forEach(function(p){
+    const k = p.college_name || 'No college';
+    (byCollege[k] = byCollege[k] || []).push(p);
+    deptsByCollege[k] = deptsByCollege[k] || {};
+    deptsByCollege[k][p.dept_id] = p.dept_name;
+  });
 %>
-<div class="row g-2">
-  <div class="col-md-4 mb-3">
-    <label class="form-label">Offered to</label>
-    <select class="form-select" name="scope" onchange="var f=this.closest('form'); f.querySelector('.scope-depts').style.display=this.value==='departments'?'':'none'; f.querySelector('.scope-progs').style.display=this.value==='all'?'none':'';">
-      <option value="programmes">Selected programmes</option>
-      <option value="departments">Whole departments</option>
-      <option value="all">All programmes (university-wide, e.g. GST)</option>
-    </select>
+<div class="mb-3 scope-picker" id="<%= uid %>">
+  <label class="form-label">Offered to <span class="text-secondary small">(who takes this course)</span></label>
+  <div class="border rounded p-3 bg-white">
+    <% [['programmes','Selected programmes only'],['departments','Whole departments (and any programmes ticked below)'],['all','All programmes in the university (e.g. GST)']].forEach(function(o, i){ %>
+      <div class="form-check">
+        <input class="form-check-input sp-scope" type="radio" name="scope" value="<%= o[0] %>" id="<%= uid %>_<%= o[0] %>" <%= i === 0 ? 'checked' : '' %>>
+        <label class="form-check-label" for="<%= uid %>_<%= o[0] %>"><%= o[1] %></label>
+      </div>
+    <% }) %>
+
+    <div class="sp-depts mt-3" style="display:none;">
+      <div class="fw-medium small text-uppercase text-secondary mb-1">Departments</div>
+      <div style="max-height:180px; overflow:auto;">
+        <% Object.keys(deptsByCollege).forEach(function(col){ %>
+          <div class="small text-secondary mt-2 mb-1"><%= col %></div>
+          <% Object.keys(deptsByCollege[col]).forEach(function(did){ %>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="department_ids" value="<%= did %>" id="<%= uid %>_d<%= did %>">
+              <label class="form-check-label" for="<%= uid %>_d<%= did %>"><%= deptsByCollege[col][did] %></label>
+            </div>
+          <% }) %>
+        <% }) %>
+      </div>
+    </div>
+
+    <div class="sp-progs mt-3">
+      <div class="fw-medium small text-uppercase text-secondary mb-1">Programmes <span class="text-secondary text-lowercase fw-normal">— tick as many as you need</span></div>
+      <div style="max-height:260px; overflow:auto;">
+        <% Object.keys(byCollege).forEach(function(col){ %>
+          <div class="fw-medium small text-uppercase text-secondary mt-3 mb-1"><%= col %></div>
+          <% byCollege[col].forEach(function(p){ const isHome = home === p.id; %>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="programme_ids" value="<%= p.id %>" id="<%= uid %>_p<%= p.id %>" <%= isHome ? 'checked disabled' : '' %>>
+              <label class="form-check-label" for="<%= uid %>_p<%= p.id %>"><%= p.name %> <span class="text-secondary small">(<%= p.dept_name %><%= p.study_mode && p.study_mode !== 'full_time' ? ' · ' + modeShort(p.study_mode) : '' %>)</span><%= isHome ? ' — home programme' : '' %></label>
+            </div>
+          <% }) %>
+        <% }) %>
+      </div>
+    </div>
   </div>
-  <div class="col-md-4 mb-3 scope-depts" style="display:none;">
-    <label class="form-label">Departments</label>
-    <select class="form-select" name="department_ids" multiple size="4">
-      <% depts.forEach(function(d){ %><option value="<%= d.dept_id %>"><%= d.college_code ? d.college_code + ' · ' : '' %><%= d.dept_name %></option><% }) %>
-    </select>
-    <div class="form-text">Every programme in them, including ones added later.</div>
-  </div>
-  <div class="col-md-4 mb-3 scope-progs">
-    <label class="form-label">Plus these programmes <span class="text-secondary small">(optional)</span></label>
-    <select class="form-select" name="programme_ids" multiple size="4">
-      <% allProgrammes.forEach(function(p){ %><option value="<%= p.id %>"><%= p.college_code ? p.college_code + ' · ' : '' %><%= p.name %> (<%= p.dept_code %>)</option><% }) %>
-    </select>
-    <div class="form-text">Ctrl/Cmd-click to pick several.</div>
-  </div>
+  <script>
+    (function () {
+      var box = document.getElementById('<%= uid %>');
+      function sync() {
+        var v = box.querySelector('.sp-scope:checked').value;
+        box.querySelector('.sp-depts').style.display = v === 'departments' ? '' : 'none';
+        box.querySelector('.sp-progs').style.display = v === 'all' ? 'none' : '';
+      }
+      Array.prototype.forEach.call(box.querySelectorAll('.sp-scope'), function (r) { r.addEventListener('change', sync); });
+      sync();
+    })();
+  </script>
 </div>

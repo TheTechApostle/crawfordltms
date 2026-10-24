@@ -1,5 +1,5 @@
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
-  <div><div class="kicker">Programme Coordinator<% if (programme) { %> · <%= programme.dept_name %><% } %></div><h1 class="h3 mb-0">Lecturer allocation</h1></div>
+  <div><div class="kicker">Programme Coordinator<% if (programme) { %> · <%= programme.dept_name %> · <%= modeLabel(programme.study_mode) %><% } %></div><h1 class="h3 mb-0">Lecturer allocation</h1></div>
   <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
 </div>
 
@@ -28,11 +28,13 @@
   <% } else { %>
     <% offerings.forEach(function(o){ %><form id="alloc-<%= o.id %>" method="POST" action="/coordinator/allocation/<%= o.id %>"><input type="hidden" name="programme_id" value="<%= programme.id %>"></form><% }) %>
     <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-      <thead><tr><th>Course</th><th>Level</th><th>Registered</th><th>Current lecturer</th><th>Status</th><th style="min-width:300px;">Propose lecturer</th></tr></thead>
+      <thead><tr><th>Course</th><th>Mode</th><th>Semester</th><th>Level</th><th>Registered</th><th>Current lecturer</th><th>Status</th><th style="min-width:300px;">Propose lecturer</th></tr></thead>
       <tbody>
       <% offerings.forEach(function(o){ %>
         <tr>
           <td><span class="font-monospace"><%= o.code %></span> — <%= o.title %></td>
+          <td><span class="badge bg-light text-dark border fw-normal"><%= modeShort(o.study_mode) %></span></td>
+          <td><%= semLabel(o.study_mode, o.semester) %></td>
           <td><%= o.level %></td>
           <td><%= o.registered_count %></td>
           <td><%= o.lecturer_name || '—' %></td>
@@ -46,7 +48,7 @@
               <select form="alloc-<%= o.id %>" name="lecturer_id" class="form-select form-select-sm" style="max-width:220px;">
                 <option value="">— none / withdraw proposal —</option>
                 <% lecturers.forEach(function(l){ const cur = (o.allocation_status === 'pending' ? o.proposed_lecturer_id : o.lecturer_id); %>
-                  <option value="<%= l.id %>" <%= cur === l.id ? 'selected' : '' %>><%= l.name %></option>
+                  <option value="<%= l.id %>" <%= cur === l.id ? 'selected' : '' %>><%= l.self ? 'Myself — ' : '' %><%= l.name %></option>
                 <% }) %>
               </select>
               <button form="alloc-<%= o.id %>" class="btn btn-sm btn-gold" type="submit"><i class="fa-solid fa-paper-plane me-1"></i> Send to HOD</button>
@@ -59,16 +61,48 @@
   <% } %>
 </div></div>
 
+<% if (programme && session) { %>
+<div class="card mb-3"><div class="card-body">
+  <h2 class="h6 card-title"><i class="fa-solid fa-file-arrow-up me-1 text-secondary"></i> Bulk allocation upload</h2>
+  <p class="text-secondary small">Paste or upload rows <code>course_code,lecturer_email[,study_mode,semester]</code>. Each row becomes a proposal for the HOD to approve. Use your own email to put yourself forward to teach a course. If a course has several offerings this session, add <code>study_mode</code> (full_time / part_time / conversion) and <code>semester</code>.</p>
+  <form method="POST" action="/coordinator/allocation/import">
+    <input type="hidden" name="programme_id" value="<%= programme.id %>">
+    <div class="mb-2"><input class="form-control" type="file" id="allocFile" accept=".csv,text/csv,text/plain"></div>
+    <div class="mb-2"><textarea class="form-control font-monospace" id="allocCsv" name="csv" rows="5" required placeholder="course_code,lecturer_email,study_mode,semester&#10;CSC301,lecturer1@crawford.edu.ng,,&#10;CYB201,<%= '' %>your-own-email@crawford.edu.ng,full_time,2"></textarea></div>
+    <button class="btn btn-gold" type="submit"><i class="fa-solid fa-paper-plane me-1"></i> Send proposals to HOD</button>
+    <a class="btn btn-outline-secondary" href="/coordinator/allocation/template.csv"><i class="fa-solid fa-download me-1"></i> Template</a>
+  </form>
+  <% if (typeof result !== 'undefined' && result) { %>
+    <hr>
+    <p class="mb-2"><span class="badge badge-published"><%= result.proposed.length %> proposed</span>
+      <% if (result.errors.length) { %><span class="badge badge-rejected"><%= result.errors.length %> with problems</span><% } %></p>
+    <% if (result.errors.length) { %><ul class="small text-secondary mb-1"><% result.errors.forEach(function(e){ %><li><%= e %></li><% }) %></ul><% } %>
+    <% if (result.proposed.length) { %><p class="small text-secondary mb-0">Sent: <%= result.proposed.join('; ') %></p><% } %>
+  <% } %>
+</div></div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var f = document.getElementById('allocFile'); if (!f) return;
+    f.addEventListener('change', function (e) {
+      var file = e.target.files[0]; if (!file) return;
+      var r = new FileReader(); r.onload = function () { document.getElementById('allocCsv').value = r.result; }; r.readAsText(file);
+    });
+  });
+</script>
+<% } %>
+
 <% if (shared.length) { %>
 <div class="card"><div class="card-body">
   <h2 class="h6 card-title"><i class="fa-solid fa-share-nodes me-1 text-secondary"></i> Shared courses taken by <%= programme.name %></h2>
   <p class="text-secondary small">Owned and allocated by another department or programme — shown for information only.</p>
   <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-    <thead><tr><th>Course</th><th>Owned by</th><th>Lecturer</th><th>Status</th></tr></thead>
+    <thead><tr><th>Course</th><th>Level</th><th>Semester</th><th>Owned by</th><th>Lecturer</th><th>Status</th></tr></thead>
     <tbody>
     <% shared.forEach(function(o){ %>
       <tr>
         <td><span class="font-monospace"><%= o.code %></span> — <%= o.title %></td>
+        <td><%= o.level %></td>
+        <td><%= semLabel(o.study_mode, o.semester) %></td>
         <td><%= o.dept_name %></td>
         <td><%= o.lecturer_name || '—' %></td>
         <td><span class="badge badge-<%= statusBadge[o.allocation_status] %>"><%= statusText[o.allocation_status] %></span></td>

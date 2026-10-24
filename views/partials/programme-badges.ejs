@@ -16,6 +16,6 @@
 <% } %>
 <% rows.forEach(function(l){ %>
   <span class="badge <%= (typeof homeId !== 'undefined' && homeId === l.programme_id) ? 'bg-dark' : 'bg-light text-dark border' %> font-monospace fw-normal"
-        title="<%= l.name %> — <%= l.dept_name %><%= l.college_name ? ' · ' + l.college_name : '' %>"><%= l.college_code ? l.college_code + ' · ' : '' %><%= l.code %></span>
+        title="<%= l.name %> — <%= l.dept_name %><%= l.college_name ? ' · ' + l.college_name : '' %>"><%= l.college_code ? l.college_code + ' · ' : '' %><%= l.code %><% if (l.study_mode && l.study_mode !== 'full_time') { %> · <%= modeShort(l.study_mode) %><% } %><% if (l.placement_level) { %> · <%= l.placement_level %>L<% } %><% if (l.placement_semester) { %> · <%= semLabel(l.study_mode, l.placement_semester) %><% } %></span>
 <% }) %>
 <% if (scope === 'programmes' && !rows.length) { %><span class="text-secondary small">—</span><% } %>

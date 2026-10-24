@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/db');
+const access = require('../services/courseAccess');
 const { requireRole } = require('../middleware/auth');
 const { handleLateChange } = require('../services/approvalService');
 
@@ -17,13 +18,13 @@ router.get('/', (req, res) => {
     registeredCount = db.prepare(`
       SELECT COUNT(*) c FROM enrollments e
       JOIN course_offerings co ON co.id = e.offering_id
-      WHERE co.session_id = ? AND e.student_id = ?
+      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND e.student_id = ?
     `).get(session.id, req.session.user.id).c;
     publishedCount = db.prepare(`
       SELECT COUNT(*) c FROM timetable_entries te
       JOIN course_offerings co ON co.id = te.offering_id
       JOIN enrollments e ON e.offering_id = co.id
-      WHERE co.session_id = ? AND e.student_id = ? AND te.status = 'published'
+      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND e.student_id = ? AND te.status = 'published'
     `).get(session.id, req.session.user.id).c;
   }
   res.render('student/dashboard', { title: 'Student dashboard', session, registeredCount, publishedCount });
@@ -32,24 +33,44 @@ router.get('/', (req, res) => {
 router.get('/register', (req, res) => {
   const session = activeSession();
   const user = req.session.user;
+  const me = db.prepare('SELECT u.level, u.programme_id, p.name AS programme_name, p.study_mode FROM users u LEFT JOIN programmes p ON p.id = u.programme_id WHERE u.id = ?').get(user.id);
   let offerings = [], myOfferingIds = new Set();
   if (session) {
-    offerings = db.prepare(`
-      SELECT co.*, c.code, c.title, c.credit_units, c.level, d.name AS dept_name, u.name AS lecturer_name
+    // Offerings of the CURRENT semester of the student's calendar. With a
+    // programme set, a course shows only if their programme takes it at their
+    // level, in that semester and study mode (levels/semesters can differ per
+    // programme). Students without a programme fall back to matching on level.
+    const base = `
+      SELECT co.*, c.code, c.title, c.credit_units, c.course_type, d.name AS dept_name, u.name AS lecturer_name,
+             COALESCE(cp.level, c.level) AS level
       FROM course_offerings co
       JOIN courses c ON c.id = co.course_id
       JOIN departments d ON d.id = c.department_id
       LEFT JOIN users u ON u.id = co.lecturer_id
-      WHERE co.session_id = ? AND c.level = ? AND c.status = 'approved'
-    `).all(session.id, user.level || 0);
+      %JOIN%
+      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND c.status = 'approved' %WHERE%
+      ORDER BY c.code
+    `;
+    if (me.programme_id) {
+      offerings = db.prepare(base
+        .replace('%JOIN%', `JOIN course_programmes cp ON cp.course_id = c.id AND cp.programme_id = ?
+                            JOIN programmes sp ON sp.id = cp.programme_id`)
+        .replace('%WHERE%', `AND sp.study_mode = co.study_mode
+                             AND COALESCE(cp.semester, c.semester) = co.semester
+                             AND COALESCE(cp.level, c.level) = ?`))
+        .all(me.programme_id, session.id, me.level || 0);
+    } else {
+      offerings = db.prepare(base.replace('%JOIN%', 'LEFT JOIN course_programmes cp ON 0').replace('%WHERE%', 'AND c.level = ?'))
+        .all(session.id, me.level || 0);
+    }
     const mine = db.prepare(`
       SELECT offering_id FROM enrollments e
       JOIN course_offerings co ON co.id = e.offering_id
-      WHERE co.session_id = ? AND e.student_id = ?
+      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND e.student_id = ?
     `).all(session.id, user.id);
     myOfferingIds = new Set(mine.map(m => m.offering_id));
   }
-  res.render('student/register', { title: 'Course registration', session, offerings, myOfferingIds });
+  res.render('student/register', { title: 'Course registration', session, offerings, myOfferingIds, me });
 });
 
 router.post('/register/:offeringId', (req, res) => {
@@ -88,7 +109,7 @@ router.get('/timetable', (req, res) => {
       LEFT JOIN venues v ON v.id = te.venue_id
       LEFT JOIN timeslots ts ON ts.id = te.timeslot_id
       JOIN enrollments e ON e.offering_id = co.id
-      WHERE co.session_id = ? AND e.student_id = ? AND te.status = 'published'
+      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND e.student_id = ? AND te.status = 'published'
     `).all(session.id, req.session.user.id);
   }
   res.render('student/timetable', { title: 'My timetable', session, entries });

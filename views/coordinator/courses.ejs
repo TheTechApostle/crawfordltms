@@ -1,6 +1,9 @@
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-4 pb-3 border-bottom">
-  <div><div class="kicker">Programme Coordinator<% if (programme) { %> · <%= programme.dept_name %><% } %></div><h1 class="h3 mb-0">Programme courses</h1></div>
-  <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+  <div><div class="kicker">Programme Coordinator<% if (programme) { %> · <%= programme.dept_name %> · <%= modeLabel(programme.study_mode) %><% } %></div><h1 class="h3 mb-0">Programme courses</h1></div>
+  <div class="d-flex gap-2 align-items-center">
+    <% if (session) { %><span class="badge bg-light text-dark border"><%= session.name %></span><% } %>
+    <a class="btn btn-gold" href="/coordinator/courses/import<%= programme ? '?programme_id=' + programme.id : '' %>"><i class="fa-solid fa-file-arrow-up me-1"></i> Bulk upload</a>
+  </div>
 </div>
 
 <% if (!programme) { %>
@@ -27,11 +30,17 @@
         <div class="col-md-2 mb-3"><label class="form-label">Level</label><input class="form-control" name="level" type="number" required placeholder="400"></div>
         <div class="col-md-2 mb-3"><label class="form-label">Units</label><input class="form-control" name="credit_units" type="number" value="3"></div>
       </div>
-      <div class="row g-2"><div class="col-md-4 mb-3">
+      <div class="row g-2">
+        <div class="col-md-4 mb-3"><label class="form-label">Course type</label>
+          <select class="form-select" name="course_type"><option value="compulsory">Compulsory</option><option value="elective">Elective</option></select></div>
+        <div class="col-md-4 mb-3"><label class="form-label">Semester</label>
+          <%- include('../partials/semester-select', { value: 1, cls: '' }) %></div>
+        <div class="col-md-4 mb-3">
           <label class="form-label">Estimated class size</label>
           <input class="form-control" name="expected_class_size" type="number" placeholder="optional">
-      </div></div>
-      <%- include('../partials/scope-fields', { allProgrammes: allProgrammes }) %>
+        </div>
+      </div>
+      <%- include('../partials/scope-fields', { allProgrammes: allProgrammes, homeProgrammeId: programme.id }) %>
       <button class="btn btn-gold" type="submit"><i class="fa-solid fa-paper-plane me-1"></i> Submit for approval</button>
     </form>
   </div></div></div>
@@ -42,6 +51,13 @@
     <form method="POST" action="/coordinator/courses/link">
       <input type="hidden" name="programme_id" value="<%= programme.id %>">
       <div class="mb-3"><label class="form-label">Course code</label><input class="form-control" name="code" required placeholder="GST201"></div>
+      <div class="row g-2">
+        <div class="col-5 mb-3"><label class="form-label">Level <span class="text-secondary small">(if different)</span></label><input class="form-control" name="level" type="number" placeholder="e.g. 200"></div>
+        <div class="col-7 mb-3"><label class="form-label">Semester <span class="text-secondary small">(if different)</span></label>
+          <select class="form-select" name="semester"><option value="">Same as owner</option>
+            <% semOptions(programme.study_mode).forEach(function(o){ %><option value="<%= o.number %>"><%= o.name %></option><% }) %></select></div>
+      </div>
+      <p class="form-text mt-0">e.g. the owner teaches it at 300L but your programme takes it at 200L, or in a different semester.</p>
       <button class="btn btn-outline-secondary" type="submit"><i class="fa-solid fa-link me-1"></i> Add to <%= programme.code %></button>
     </form>
   </div></div></div>
@@ -63,7 +79,7 @@
       <% } %>
     <% }) %>
     <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-      <thead><tr><th style="min-width:100px;">Code</th><th style="min-width:200px;">Title</th><th>Level</th><th>Units</th><th>Est. size</th><th>Also offered by</th><th>Status</th><th style="min-width:230px;"></th></tr></thead>
+      <thead><tr><th style="min-width:100px;">Code</th><th style="min-width:200px;">Title</th><th>Level</th><th>Semester</th><th>Type</th><th>Units</th><th>Est. size</th><th>Also offered by</th><th>Status</th><th style="min-width:230px;"></th></tr></thead>
       <tbody>
       <% courses.forEach(function(c){ const mine = c.programme_id === programme.id; const editable = mine && ['pending','rejected'].includes(c.status); %>
         <tr>
@@ -71,12 +87,21 @@
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm font-monospace" name="code" value="<%= c.code %>" required></td>
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="title" value="<%= c.title %>" required></td>
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="level" type="number" value="<%= c.level %>" style="width:80px;" required></td>
+            <td><%- include('../partials/semester-select', { value: c.semester, form: 'edit-' + c.id, cls: 'form-select-sm' }) %></td>
+            <td>
+              <select form="edit-<%= c.id %>" class="form-select form-select-sm" name="course_type" style="min-width:110px;">
+                <option value="compulsory" <%= c.course_type !== 'elective' ? 'selected' : '' %>>Compulsory</option>
+                <option value="elective" <%= c.course_type === 'elective' ? 'selected' : '' %>>Elective</option>
+              </select>
+            </td>
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="credit_units" type="number" value="<%= c.credit_units %>" style="width:70px;"></td>
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="expected_class_size" type="number" value="<%= c.expected_class_size || '' %>" style="width:80px;" placeholder="—"></td>
           <% } else { %>
             <td class="font-monospace"><%= c.code %></td>
             <td><%= c.title %><% if (!mine) { %><div class="form-text mb-0"><i class="fa-solid fa-share-nodes me-1"></i>Owned by <%= c.dept_name %> — shared with this programme</div><% } %></td>
-            <td><%= c.level %></td><td><%= c.credit_units %></td><td><%= c.expected_class_size || '—' %></td>
+            <td><%= mine ? c.level : (c.placement_level || c.level) %><% if (!mine && c.placement_level && c.placement_level !== c.level) { %> <span class="form-text">(owner: <%= c.level %>)</span><% } %></td>
+            <td class="small"><%= semLabel(programme.study_mode, mine ? c.semester : (c.placement_semester || c.semester)) %></td>
+            <td><%- include('../partials/course-type-badge', { type: c.course_type }) %></td><td><%= c.credit_units %></td><td><%= c.expected_class_size || '—' %></td>
           <% } %>
           <td><%- include('../partials/programme-badges', { list: linked[c.id], homeId: c.programme_id, info: scopes[c.id] }) %></td>
           <td>
@@ -90,12 +115,14 @@
             <% } %>
             <% if (mine) { %>
               <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#shareModal<%= c.id %>"><i class="fa-solid fa-share-nodes me-1"></i> Offered by…</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#placeModal<%= c.id %>" title="Level & semester per programme"><i class="fa-solid fa-layer-group"></i></button>
               <% if (session && c.status === 'approved' && !c.offered_this_session) { %>
                 <button form="offer-<%= c.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-share me-1"></i> Offer this session</button>
               <% } else if (c.offered_this_session) { %>
                 <a class="btn btn-sm btn-outline-secondary" href="/coordinator/allocation?programme_id=<%= programme.id %>"><i class="fa-solid fa-chalkboard-user me-1"></i> Allocate</a>
               <% } %>
             <% } else { %>
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#myPlaceModal<%= c.id %>" title="Level & semester for <%= programme.code %>"><i class="fa-solid fa-layer-group me-1"></i> Level/semester</button>
               <button form="unlink-<%= c.id %>" class="btn btn-sm btn-outline-danger" type="submit" data-confirm="Stop offering <%= c.code %> under <%= programme.name %>?"><i class="fa-solid fa-link-slash me-1"></i> Remove</button>
             <% } %>
           </td>
@@ -106,5 +133,26 @@
   <% } %>
 </div></div>
 
+<%- include('../partials/placements-modals', { courses: courses, linked: linked, actionBase: '/coordinator/courses', canManage: function(c){ return c.programme_id === programme.id; }, programme: programme }) %>
+<% courses.filter(function(c){ return c.programme_id !== programme.id; }).forEach(function(c){ %>
+  <div class="modal fade" id="myPlaceModal<%= c.id %>" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <form class="modal-content" method="POST" action="/coordinator/courses/<%= c.id %>/placement">
+        <input type="hidden" name="programme_id" value="<%= programme.id %>">
+        <div class="modal-header"><h5 class="modal-title h6"><i class="fa-solid fa-layer-group me-1"></i> <%= c.code %> in <%= programme.name %></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+        <div class="modal-body">
+          <p class="text-secondary small">The owning department teaches <strong><%= c.code %></strong> at <%= c.level %> level, <%= semLabel(programme.study_mode, c.semester) %>. Set the level and semester <strong><%= programme.name %></strong> takes it at — leave blank for the same.</p>
+          <div class="row g-2">
+            <div class="col-5 mb-3"><label class="form-label">Level</label><input class="form-control" type="number" name="level" value="<%= c.placement_level || '' %>" placeholder="<%= c.level %>"></div>
+            <div class="col-7 mb-3"><label class="form-label">Semester</label>
+              <select class="form-select" name="semester"><option value="">Same as owner (<%= semLabel(programme.study_mode, c.semester) %>)</option>
+                <% semOptions(programme.study_mode).forEach(function(o){ %><option value="<%= o.number %>" <%= c.placement_semester === o.number ? 'selected' : '' %>><%= o.name %></option><% }) %></select></div>
+          </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-gold" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button></div>
+      </form>
+    </div>
+  </div>
+<% }) %>
 <%- include('../partials/share-modals', { courses: courses, linked: linked, allProgrammes: allProgrammes, scopes: scopes, actionBase: '/coordinator/courses', canManage: function(c){ return c.programme_id === programme.id; }, programme: programme }) %>
 <% } %>

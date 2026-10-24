@@ -17,12 +17,17 @@
         <% }) %>
 
         <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-          <thead><tr><th>Code</th><th>Name</th><th>Department</th><th>College</th><th>Coordinator</th><th>Courses</th><th style="min-width:150px;"></th></tr></thead>
+          <thead><tr><th>Code</th><th>Name</th><th>Study mode</th><th>Department</th><th>College</th><th>Coordinator</th><th>Courses</th><th style="min-width:150px;"></th></tr></thead>
           <tbody>
           <% programmes.forEach(function(p){ %>
             <tr>
               <td><input form="edit-prog-<%= p.id %>" class="form-control form-control-sm font-monospace" style="width:90px;" name="code" value="<%= p.code %>" required></td>
               <td><input form="edit-prog-<%= p.id %>" class="form-control form-control-sm" name="name" value="<%= p.name %>" required></td>
+              <td>
+                <select form="edit-prog-<%= p.id %>" class="form-select form-select-sm" name="study_mode">
+                  <% Object.keys(MODES).forEach(function(m){ %><option value="<%= m %>" <%= p.study_mode === m ? 'selected' : '' %>><%= MODES[m] %></option><% }) %>
+                </select>
+              </td>
               <td>
                 <select form="edit-prog-<%= p.id %>" class="form-select form-select-sm" name="department_id" required>
                   <% departments.forEach(function(d){ %>
@@ -63,6 +68,13 @@
         <div class="mb-3">
           <label for="code" class="form-label">Code</label>
           <input class="form-control" id="code" name="code" required placeholder="CYB">
+        </div>
+        <div class="mb-3">
+          <label for="study_mode" class="form-label">Study mode</label>
+          <select class="form-select" id="study_mode" name="study_mode">
+            <% Object.keys(MODES).forEach(function(m){ %><option value="<%= m %>"><%= MODES[m] %></option><% }) %>
+          </select>
+          <div class="form-text">Full-time and part-time run Harmattan &amp; Rain; conversion (HND → BSc) runs three semesters. Offer the same degree in another mode by adding it as another programme, e.g. "Computer Science (Part-time)".</div>
         </div>
         <div class="mb-3">
           <label for="department_id" class="form-label">Department</label>

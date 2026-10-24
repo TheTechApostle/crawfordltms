@@ -64,6 +64,18 @@
         </div>
 
         <div class="mb-3">
+          <label for="programme_id" class="form-label">Programme</label>
+          <select class="form-select" id="programme_id" name="programme_id">
+            <option value="">— select your programme —</option>
+            <% const modeText = { full_time: 'Full-time', part_time: 'Part-time', conversion: 'Conversion' };
+               programmes.forEach(function(p){ %>
+              <option value="<%= p.id %>" data-dept="<%= p.department_id %>" <%= String(form.programme_id) === String(p.id) ? 'selected' : '' %>><%= p.name %> — <%= modeText[p.study_mode] || p.study_mode %></option>
+            <% }) %>
+          </select>
+          <div class="form-text">Pick the programme and study mode you are enrolled in (full-time, part-time or conversion).</div>
+        </div>
+
+        <div class="mb-3">
           <label for="level" class="form-label">Level</label>
           <select class="form-select" id="level" name="level" required>
             <option value="">— select your level —</option>
@@ -81,5 +93,20 @@
       </p>
     </div>
   </div>
+<script>
+  // Only offer the programmes of the chosen department.
+  (function () {
+    var dept = document.getElementById('department_id'), prog = document.getElementById('programme_id');
+    function filter() {
+      Array.prototype.forEach.call(prog.options, function (o) {
+        if (!o.value) return;
+        var show = !dept.value || o.getAttribute('data-dept') === dept.value;
+        o.hidden = !show; o.disabled = !show;
+        if (!show && o.selected) prog.value = '';
+      });
+    }
+    dept.addEventListener('change', filter); filter();
+  })();
+</script>
 </body>
 </html>

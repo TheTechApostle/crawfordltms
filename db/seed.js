@@ -40,6 +40,11 @@ function seedAll() {
   const progCYB = insProgramme.run('Cyber Security', 'CYB', deptCS).lastInsertRowid;
   const progMTH = insProgramme.run('Mathematics', 'MTH', deptMTH).lastInsertRowid;
   const progMEE = insProgramme.run('Mechanical Engineering', 'MEE', deptMEE).lastInsertRowid;
+  // The same degree can run in other study modes: each is its own programme.
+  const progCSPT = insProgramme.run('Computer Science (Part-time)', 'CS-PT', deptCS).lastInsertRowid;
+  const progCSCV = insProgramme.run('Computer Science (Conversion)', 'CS-CV', deptCS).lastInsertRowid;
+  db.prepare("UPDATE programmes SET study_mode = 'part_time' WHERE id = ?").run(progCSPT);
+  db.prepare("UPDATE programmes SET study_mode = 'conversion' WHERE id = ?").run(progCSCV);
 
   // ---------- Remaining users ----------
   const hodCsId = insUser.run('Dr. Funmilayo Bello', 'hod.cs@crawford.edu.ng', hash, 'hod', deptCS, null, null).lastInsertRowid;
@@ -100,11 +105,23 @@ function seedAll() {
     INSERT INTO courses (code, title, credit_units, department_id, programme_id, level, status, created_by)
     VALUES ('GST201','Communication Skills II',2,?,?,200,'approved',?)
   `).run(deptCS, progCS, hodCsId).lastInsertRowid;
+  db.prepare("UPDATE courses SET course_type = 'elective' WHERE code IN ('CSC305')").run(); // demo elective
   // University-wide: offered to every programme (and to any added later).
   db.prepare("UPDATE courses SET scope = 'all' WHERE id = ?").run(gst201);
+  // CYB201 is owned by Cyber Security (200 level, Harmattan) but Computer
+  // Science takes it at 300 level in the Rain semester, and the conversion
+  // programme takes it in its third semester: same course, different level,
+  // semester and study mode per programme.
+  const cyb201 = db.prepare(`
+    INSERT INTO courses (code, title, credit_units, department_id, programme_id, level, semester, status, created_by)
+    VALUES ('CYB201','Introduction to Cyber Security',3,?,?,200,1,'approved',?)
+  `).run(deptCS, progCYB, hodCsId).lastInsertRowid;
   // Every course is linked to its home programme in course_programmes.
   db.exec('INSERT OR IGNORE INTO course_programmes (course_id, programme_id) SELECT id, programme_id FROM courses WHERE programme_id IS NOT NULL');
-  require('../services/courseAccess').syncCourseScope(gst201);
+  const access = require('../services/courseAccess');
+  access.syncCourseScope(gst201);
+  access.linkCourseToProgramme(cyb201, progCS, hodCsId);   access.setPlacement(cyb201, progCS, 300, 2);
+  access.linkCourseToProgramme(cyb201, progCSCV, hodCsId); access.setPlacement(cyb201, progCSCV, 300, 3);
 
   // ---------- Venues (each owned by a college; NULL = shared) ----------
   const insVenue = db.prepare('INSERT INTO venues (name, building, capacity, college_id) VALUES (?,?,?,?)');
@@ -122,7 +139,7 @@ function seedAll() {
 
   // ---------- Academic session ----------
   const sessionId = db.prepare('INSERT INTO academic_sessions (name, is_active, reg_locked) VALUES (?,1,0)')
-    .run('2025/2026 - First Semester').lastInsertRowid;
+    .run('2025/2026').lastInsertRowid;
 
   // ---------- Course offerings (with lecturers already assigned) ----------
   // Note: MEE301 is deliberately left un-offered this session, so the
@@ -135,6 +152,11 @@ function seedAll() {
   const off301 = insOffering.run(csc301, lect1, sessionId).lastInsertRowid;
   const off305 = insOffering.run(csc305, lect2, sessionId).lastInsertRowid;
   const offMth = insOffering.run(mth301, lect3, sessionId).lastInsertRowid;
+  // CYB201 -> three offerings: full-time Harmattan (Cyber Security, 200L),
+  // full-time Rain (Computer Science, 300L), conversion semester 3.
+  access.offerCourse(cyb201, sessionId);
+  // Demo students are on the full-time Computer Science programme.
+  db.prepare("UPDATE users SET programme_id = ? WHERE role = 'student'").run(progCS);
 
   // ---------- Enrollments ----------
   const insEnroll = db.prepare('INSERT INTO enrollments (offering_id, student_id) VALUES (?,?)');

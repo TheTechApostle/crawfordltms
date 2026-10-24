@@ -63,15 +63,16 @@
   <% } else { %>
     <p class="text-secondary small mb-2">Click a student to view, edit, reset their password or remove the account.</p>
     <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-      <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Department</th><th>Level</th><th class="text-center">Courses</th><th>Joined</th><th></th></tr></thead>
+      <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Department</th><th>Programme</th><th>Level</th><th class="text-center">Courses</th><th>Joined</th><th></th></tr></thead>
       <tbody>
       <% students.forEach(function(s, i){ %>
         <tr class="student-row" role="button" tabindex="0" style="cursor:pointer;"
-            data-student="<%= JSON.stringify({ id: s.id, name: s.name, email: s.email, department_id: s.department_id, level: s.level, created_at: s.created_at, courses: s.courses }) %>">
+            data-student="<%= JSON.stringify({ id: s.id, name: s.name, email: s.email, department_id: s.department_id, programme_id: s.programme_id, level: s.level, created_at: s.created_at, courses: s.courses }) %>">
           <td class="text-secondary"><%= pager.from + i %></td>
           <td class="fw-medium"><%= s.name %></td>
           <td><%= s.email %></td>
           <td><%= s.dept_name || '—' %></td>
+          <td class="small"><%= s.programme_name || '—' %><% if (s.study_mode && s.study_mode !== 'full_time') { %> <span class="badge bg-light text-dark border fw-normal"><%= modeShort(s.study_mode) %></span><% } %></td>
           <td><%= s.level || '—' %></td>
           <td class="text-center"><span class="badge bg-light text-dark border"><%= s.enrollment_count %></span></td>
           <td class="text-secondary small"><%= (s.created_at || '').slice(0, 10) %></td>
@@ -123,6 +124,13 @@
             <div class="col-4 mb-3"><label class="form-label" for="sm_level">Level</label><input class="form-control" id="sm_level" name="level" type="number" required></div>
           </div>
           <div class="mb-3">
+            <label class="form-label" for="sm_prog">Programme <span class="text-secondary small">(decides study mode, level and semester of their courses)</span></label>
+            <select class="form-select" id="sm_prog" name="programme_id">
+              <option value="">— none —</option>
+              <% programmes.forEach(function(p){ %><option value="<%= p.id %>" data-dept="<%= p.department_id %>"><%= p.name %> — <%= modeLabel(p.study_mode) %></option><% }) %>
+            </select>
+          </div>
+          <div class="mb-3">
             <label class="form-label" for="sm_pw">Reset password <span class="text-secondary small">(optional)</span></label>
             <input class="form-control" id="sm_pw" name="new_password" type="password" autocomplete="new-password" placeholder="Leave blank to keep the current password">
             <div class="form-text">At least 8 characters. Tell the student their new password.</div>
@@ -160,6 +168,9 @@
             <select class="form-select" id="a_dept" name="department_id" required><% departments.forEach(function(d){ %><option value="<%= d.id %>"><%= d.name %></option><% }) %></select></div>
           <div class="col-4 mb-3"><label class="form-label" for="a_level">Level</label><input class="form-control" id="a_level" name="level" type="number" required placeholder="300"></div>
         </div>
+        <div class="mb-3"><label class="form-label" for="a_prog">Programme</label>
+          <select class="form-select" id="a_prog" name="programme_id"><option value="">— none —</option>
+            <% programmes.forEach(function(p){ %><option value="<%= p.id %>" data-dept="<%= p.department_id %>"><%= p.name %> — <%= modeLabel(p.study_mode) %></option><% }) %></select></div>
         <div class="mb-1"><label class="form-label" for="a_pw">Password</label><input class="form-control" id="a_pw" name="password" placeholder="password123 (min. 8 characters)"></div>
       </div>
       <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Add student</button></div>
@@ -173,7 +184,7 @@
     <form class="modal-content" method="POST" action="/admin/students/import">
       <div class="modal-header"><h5 class="modal-title h6"><i class="fa-solid fa-file-import me-1"></i> Bulk import students</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
       <div class="modal-body">
-        <p class="text-secondary small">One student per line: <code>name,email,department_code,level</code>. Students can also sign up themselves at <code>/register/student</code>.</p>
+        <p class="text-secondary small">One student per line: <code>name,email,department_code,level[,programme_code]</code>. Students can also sign up themselves at <code>/register/student</code>.</p>
         <div class="mb-3"><label class="form-label" for="i_file">CSV file <span class="text-secondary small">(optional — loads into the box below)</span></label><input class="form-control" type="file" id="i_file" accept=".csv,text/csv,text/plain"></div>
         <div class="mb-3"><textarea class="form-control font-monospace" id="i_csv" name="csv" rows="8" required placeholder="Blessing Okonkwo,blessing.o@crawford.edu.ng,CSC,300&#10;David Eze,david.e@crawford.edu.ng,CSC,300"></textarea></div>
         <div class="mb-3">
@@ -202,6 +213,7 @@
       document.getElementById('sm_email').value = s.email;
       document.getElementById('sm_dept').value = s.department_id;
       document.getElementById('sm_level').value = s.level || '';
+      filterProgrammes('sm_dept', 'sm_prog', s.programme_id);
       document.getElementById('sm_pw').value = '';
       document.getElementById('sm_joined').textContent = (s.created_at || '').slice(0, 10) || '—';
       var box = document.getElementById('sm_courses');
@@ -218,6 +230,20 @@
       }
       modal.show();
     }
+    // Only offer the programmes of the chosen department.
+    function filterProgrammes(deptId, progId, selected) {
+      var dept = document.getElementById(deptId), prog = document.getElementById(progId);
+      Array.prototype.forEach.call(prog.options, function (o) {
+        if (!o.value) return;
+        var show = o.getAttribute('data-dept') === dept.value;
+        o.hidden = !show; o.disabled = !show;
+      });
+      prog.value = selected && prog.querySelector('option[value="' + selected + '"]') && !prog.querySelector('option[value="' + selected + '"]').disabled ? selected : '';
+    }
+    [['sm_dept', 'sm_prog'], ['a_dept', 'a_prog']].forEach(function (p) {
+      document.getElementById(p[0]).addEventListener('change', function () { filterProgrammes(p[0], p[1], ''); });
+    });
+    filterProgrammes('a_dept', 'a_prog', '');
     document.querySelectorAll('.student-row').forEach(function (row) {
       row.addEventListener('click', function () { openStudent(row); });
       row.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openStudent(row); } });

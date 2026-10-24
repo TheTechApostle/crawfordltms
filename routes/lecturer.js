@@ -1,11 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const { db } = require('../config/db');
+const access = require('../services/courseAccess');
 const { requireRole } = require('../middleware/auth');
 const { approve, reject } = require('../services/approvalService');
 const { getAvailableSlotsForOffering } = require('../services/allocationEngine');
 
-router.use(requireRole('lecturer'));
+// Coordinators can also teach (they may allocate themselves to a course), so
+// they get the same portal for the courses they're allocated to.
+router.use(requireRole('lecturer', 'coordinator'));
 
 function activeSession() {
   return db.prepare('SELECT * FROM academic_sessions WHERE is_active = 1 ORDER BY id DESC LIMIT 1').get();
@@ -27,12 +30,12 @@ router.get('/', (req, res) => {
     pendingCount = db.prepare(`
       SELECT COUNT(*) c FROM timetable_entries te
       JOIN course_offerings co ON co.id = te.offering_id
-      WHERE co.session_id = ? AND co.lecturer_id = ? AND te.status = 'draft'
+      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND co.lecturer_id = ? AND te.status = 'draft'
     `).get(session.id, req.session.user.id).c;
     publishedCount = db.prepare(`
       SELECT COUNT(*) c FROM timetable_entries te
       JOIN course_offerings co ON co.id = te.offering_id
-      WHERE co.session_id = ? AND co.lecturer_id = ? AND te.status = 'published'
+      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND co.lecturer_id = ? AND te.status = 'published'
     `).get(session.id, req.session.user.id).c;
   }
   res.render('lecturer/dashboard', { title: 'Lecturer dashboard', session, pendingCount, publishedCount });
@@ -49,7 +52,7 @@ router.get('/slots', (req, res) => {
       JOIN courses c ON c.id = co.course_id
       LEFT JOIN venues v ON v.id = te.venue_id
       LEFT JOIN timeslots ts ON ts.id = te.timeslot_id
-      WHERE co.session_id = ? AND co.lecturer_id = ? AND te.status = 'draft'
+      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND co.lecturer_id = ? AND te.status = 'draft'
     `).all(session.id, req.session.user.id);
   }
   res.render('lecturer/slots', { title: 'My draft slots', session, entries });
@@ -78,7 +81,7 @@ router.get('/timetable', (req, res) => {
       JOIN departments d ON d.id = c.department_id
       LEFT JOIN venues v ON v.id = te.venue_id
       LEFT JOIN timeslots ts ON ts.id = te.timeslot_id
-      WHERE co.session_id = ? AND co.lecturer_id = ? AND te.status = 'published'
+      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND co.lecturer_id = ? AND te.status = 'published'
     `).all(session.id, req.session.user.id);
     entries.forEach(function (e) { e.lecturer_name = req.session.user.name; });
   }
@@ -106,7 +109,7 @@ router.get('/courses', (req, res) => {
               ORDER BY te.id DESC LIMIT 1) AS slot_label
       FROM course_offerings co
       JOIN courses c ON c.id = co.course_id
-      WHERE co.session_id = ? AND co.lecturer_id = ?
+      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND co.lecturer_id = ?
       ORDER BY c.code
     `).all(session.id, req.session.user.id);
   }

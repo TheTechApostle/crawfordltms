@@ -36,7 +36,11 @@
   <% } else if (user.role === 'coordinator') { %>
     <li class="nav-item"><a href="/coordinator" class="nav-link <%= isActive('/coordinator') %>"><i class="fa-solid fa-gauge fa-fw me-2"></i>Dashboard</a></li>
     <li class="nav-item"><a href="/coordinator/courses" class="nav-link <%= isActive('/coordinator/courses') %>"><i class="fa-solid fa-book fa-fw me-2"></i>Programme courses</a></li>
-    <li class="nav-item"><a href="/coordinator/allocation" class="nav-link <%= isActive('/coordinator/allocation') %>"><i class="fa-solid fa-chalkboard-user fa-fw me-2"></i>Lecturer allocation</a></li>
+    <li class="nav-item"><a href="/coordinator/courses/import" class="nav-link <%= isActive('/coordinator/courses/import') %>"><i class="fa-solid fa-file-arrow-up fa-fw me-2"></i>Bulk upload courses</a></li>
+    <li class="nav-item"><a href="/coordinator/allocation" class="nav-link <%= path === '/coordinator/allocation' ? 'active' : '' %>"><i class="fa-solid fa-chalkboard-user fa-fw me-2"></i>Lecturer allocation</a></li>
+    <li class="nav-item"><a href="/lecturer/courses" class="nav-link <%= path.startsWith('/lecturer/courses') ? 'active' : '' %>"><i class="fa-solid fa-book-open fa-fw me-2"></i>Courses I teach</a></li>
+    <li class="nav-item"><a href="/lecturer/slots" class="nav-link <%= isActive('/lecturer/slots') %>"><i class="fa-regular fa-square-check fa-fw me-2"></i>My draft slots</a></li>
+    <li class="nav-item"><a href="/lecturer/timetable" class="nav-link <%= isActive('/lecturer/timetable') %>"><i class="fa-regular fa-calendar fa-fw me-2"></i>My timetable</a></li>
   <% } else if (user.role === 'lecturer') { %>
     <li class="nav-item"><a href="/lecturer" class="nav-link <%= isActive('/lecturer') %>"><i class="fa-solid fa-gauge fa-fw me-2"></i>Dashboard</a></li>
     <li class="nav-item"><a href="/lecturer/courses" class="nav-link <%= path.startsWith('/lecturer/courses') ? 'active' : '' %>"><i class="fa-solid fa-book-open fa-fw me-2"></i>My courses</a></li>

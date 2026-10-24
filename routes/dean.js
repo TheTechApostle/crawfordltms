@@ -59,7 +59,7 @@ router.get('/', (req, res) => {
       JOIN course_offerings co ON co.id = te.offering_id
       JOIN courses c ON c.id = co.course_id
       JOIN departments d ON d.id = c.department_id
-      WHERE co.session_id = ? AND d.college_id = ? AND te.status = 'hod_ok'
+      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND d.college_id = ? AND te.status = 'hod_ok'
     `).get(session.id, college.id).c;
     clashCount = findClashes(session.id, college.id).length;
   }
@@ -174,7 +174,7 @@ router.get('/approvals', (req, res) => {
       LEFT JOIN users u ON u.id = co.lecturer_id
       LEFT JOIN venues v ON v.id = te.venue_id
       LEFT JOIN timeslots ts ON ts.id = te.timeslot_id
-      WHERE co.session_id = ? AND d.college_id = ? AND te.status = 'hod_ok'
+      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND d.college_id = ? AND te.status = 'hod_ok'
     `).all(session.id, college.id);
   }
   res.render('dean/approvals', { title: 'Approval queue', college, session, entries });
@@ -207,7 +207,7 @@ function findClashes(sessionId, collegeId) {
     JOIN course_offerings co ON co.id = te.offering_id
     JOIN courses c ON c.id = co.course_id
     JOIN departments d ON d.id = c.department_id
-    WHERE co.session_id = ? AND d.college_id = ? AND te.status != 'rejected' AND te.venue_id IS NOT NULL
+    WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND d.college_id = ? AND te.status != 'rejected' AND te.venue_id IS NOT NULL
     GROUP BY te.venue_id, te.timeslot_id
     HAVING COUNT(*) > 1
   `).all(sessionId, collegeId);
@@ -281,8 +281,8 @@ router.get('/allocation', (req, res) => {
   let all = [];
   if (session) {
     all = db.prepare(`
-      SELECT co.id, co.registered_count, co.allocation_status, co.allocation_reason, co.allocation_updated_at,
-             c.id AS course_id, c.code, c.title, c.level, c.department_id AS home_dept_id, c.programme_id AS home_programme_id,
+      SELECT co.id, co.study_mode, co.semester, c.semester AS course_semester, co.registered_count, co.allocation_status, co.allocation_reason, co.allocation_updated_at,
+             c.id AS course_id, c.code, c.title, c.level, c.course_type, c.department_id AS home_dept_id, c.programme_id AS home_programme_id,
              d.name AS home_dept_name, hc.name AS home_college_name, hc.id AS home_college_id,
              lu.name AS lecturer_name, lu.email AS lecturer_email, pu.name AS proposed_name, bu.name AS allocated_by,
              (SELECT te.status FROM timetable_entries te WHERE te.offering_id = co.id AND te.status != 'rejected'
@@ -300,16 +300,19 @@ router.get('/allocation', (req, res) => {
               JOIN programmes p ON p.id = cp.programme_id
               JOIN departments pd ON pd.id = p.department_id
               WHERE cp.course_id = c.id AND pd.college_id = ?))
-      ORDER BY c.level, c.code
+      ORDER BY co.semester, co.study_mode, c.level, c.code
     `).all(session.id, college.id, college.id);
     const links = access.programmesByCourse(all.map(o => o.course_id));
     const scopes = access.scopesByCourse(all.map(o => o.course_id));
     all.forEach(o => {
       o.info = scopes[o.course_id];
+      // A programme "has" this offering only if it takes the course in this offering's study mode and semester.
+      o.links = (links[o.course_id] || []).filter(l => l.study_mode === o.study_mode && (l.placement_semester != null ? l.placement_semester : o.course_semester) === o.semester);
+      o.levelFor = {}; o.links.forEach(l => { o.levelFor[l.programme_id] = l.placement_level || o.level; });
       o.programmes = links[o.course_id] || [];
       // Which of THIS college's departments/programmes offer the course.
-      o.inDepts = new Set([o.home_college_id === college.id ? o.home_dept_id : null, ...o.programmes.filter(l => l.college_id === college.id).map(l => l.dept_id)].filter(Boolean));
-      o.inProgs = new Set(o.programmes.filter(l => l.college_id === college.id).map(l => l.programme_id));
+      o.inDepts = new Set([o.home_college_id === college.id ? o.home_dept_id : null, ...o.links.filter(l => l.college_id === college.id).map(l => l.dept_id)].filter(Boolean));
+      o.inProgs = new Set(o.links.filter(l => l.college_id === college.id).map(l => l.programme_id));
       o.shared = o.programmes.length > 1 || o.home_college_id !== college.id;
     });
   }
@@ -331,6 +334,7 @@ router.get('/allocation', (req, res) => {
   let rows = null, selected = null;
   if (progId) {
     rows = all.filter(o => o.inProgs.has(progId));
+    rows.forEach(o => { o.level = o.levelFor[progId] || o.level; });
     selected = { type: 'programme', name: prog.name, dept_name: prog.dept_name, coordinator_name: prog.coordinator_name };
   } else if (deptId) {
     rows = all.filter(o => o.inDepts.has(deptId));
@@ -371,7 +375,7 @@ router.get('/timetable', (req, res) => {
       LEFT JOIN users u ON u.id = co.lecturer_id
       LEFT JOIN venues v ON v.id = te.venue_id
       LEFT JOIN timeslots ts ON ts.id = te.timeslot_id
-      WHERE co.session_id = ? AND te.status != 'rejected' AND te.timeslot_id IS NOT NULL
+      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND te.status != 'rejected' AND te.timeslot_id IS NOT NULL
     `;
     const params = [session.id];
     if (progId) {

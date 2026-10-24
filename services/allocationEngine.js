@@ -1,4 +1,5 @@
 const { db } = require('../config/db');
+const { CURRENT_OFFERING } = require('./courseAccess');
 
 /**
  * Best-Fit Decreasing allocation, exactly as specified in section 5 of the
@@ -36,7 +37,7 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null } = {}) {
     SELECT co.id, co.course_id, co.lecturer_id, co.registered_count, c.code, c.title
     FROM course_offerings co
     JOIN courses c ON c.id = co.course_id
-    WHERE co.session_id = ?
+    WHERE co.session_id = ? AND ${CURRENT_OFFERING}
   `;
   const params = [sessionId];
   if (onlyOfferingId) {
@@ -55,7 +56,7 @@ function runAllocationEngine(sessionId, { onlyOfferingId = null } = {}) {
     SELECT te.venue_id, te.timeslot_id, co.lecturer_id
     FROM timetable_entries te
     JOIN course_offerings co ON co.id = te.offering_id
-    WHERE co.session_id = ? AND te.status != 'rejected'
+    WHERE co.session_id = ? AND ${CURRENT_OFFERING} AND te.status != 'rejected'
       ${onlyOfferingId ? 'AND te.offering_id != ?' : ''}
   `;
   const takenParams = onlyOfferingId ? [sessionId, onlyOfferingId] : [sessionId];
@@ -181,7 +182,7 @@ function getAvailableSlotsForOffering(offeringId) {
     SELECT te.venue_id, te.timeslot_id, co.lecturer_id
     FROM timetable_entries te
     JOIN course_offerings co ON co.id = te.offering_id
-    WHERE co.session_id = ? AND te.status != 'rejected' AND te.offering_id != ?
+    WHERE co.session_id = ? AND ${CURRENT_OFFERING} AND te.status != 'rejected' AND te.offering_id != ?
   `).all(offering.session_id, offeringId);
   const venueSlotTaken = new Set(taken.map(t => `${t.venue_id}:${t.timeslot_id}`));
   const lecturerSlotTaken = new Set(taken.map(t => `${t.lecturer_id}:${t.timeslot_id}`));

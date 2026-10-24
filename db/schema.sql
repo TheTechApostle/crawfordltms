@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
   department_id INTEGER REFERENCES departments(id),
   college_id    INTEGER REFERENCES colleges(id), -- a Dean's own college
   level         INTEGER,                 -- for students, e.g. 100/200/300/400
+  programme_id  INTEGER REFERENCES programmes(id), -- a student's programme (and so their study mode)
   created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -39,6 +40,9 @@ CREATE TABLE IF NOT EXISTS programmes (
   code          TEXT NOT NULL,
   department_id INTEGER NOT NULL REFERENCES departments(id),
   coordinator_id INTEGER REFERENCES users(id), -- the Programme Coordinator; NULL = no coordinator, so the HOD handles courses/allocation
+  -- How the programme is run. The same degree in two modes is two programmes
+  -- (e.g. "Computer Science" full-time and "Computer Science (Part-time)").
+  study_mode TEXT NOT NULL DEFAULT 'full_time' CHECK (study_mode IN ('full_time','part_time','conversion')),
   UNIQUE(department_id, code)
 );
 
@@ -47,7 +51,21 @@ CREATE TABLE IF NOT EXISTS academic_sessions (
   name        TEXT NOT NULL UNIQUE,      -- e.g. "2025/2026 - First Semester"
   is_active   INTEGER NOT NULL DEFAULT 0,
   reg_locked  INTEGER NOT NULL DEFAULT 0, -- registration lock (Fig.1 dependency)
-  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  -- Which semester each calendar is currently in. Full-time and part-time run
+  -- the 'regular' calendar (1 = Harmattan, 2 = Rain); conversion (HND -> BSc)
+  -- runs its own three-semester calendar. Registration, timetabling and the
+  -- lecturer/student portals work on the current semester of each calendar.
+  regular_semester    INTEGER NOT NULL DEFAULT 1,
+  conversion_semester INTEGER NOT NULL DEFAULT 1
+);
+
+-- Semester names per calendar ('regular' = full-time & part-time, 'conversion').
+CREATE TABLE IF NOT EXISTS semesters (
+  calendar TEXT NOT NULL CHECK (calendar IN ('regular','conversion')),
+  number   INTEGER NOT NULL,
+  name     TEXT NOT NULL,
+  PRIMARY KEY (calendar, number)
 );
 
 CREATE TABLE IF NOT EXISTS courses (
@@ -67,7 +85,12 @@ CREATE TABLE IF NOT EXISTS courses (
   -- course_programmes; 'departments' = every programme of the departments in
   -- course_departments (plus any listed programmes); 'all' = every programme
   -- in the university (e.g. GST courses).
-  scope                 TEXT NOT NULL DEFAULT 'programmes' CHECK (scope IN ('programmes','departments','all'))
+  scope                 TEXT NOT NULL DEFAULT 'programmes' CHECK (scope IN ('programmes','departments','all')),
+  course_type           TEXT NOT NULL DEFAULT 'compulsory' CHECK (course_type IN ('compulsory','elective')),
+  -- courses.level / courses.semester are the HOME programme's level and
+  -- semester. Other programmes offering the course may take it at a different
+  -- level or semester: see course_programmes.level / .semester.
+  semester              INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS venues (
@@ -107,7 +130,12 @@ CREATE TABLE IF NOT EXISTS course_offerings (
   allocation_by        INTEGER REFERENCES users(id),
   allocation_reason    TEXT,   -- HOD's reason when an allocation is rejected
   allocation_updated_at TEXT,
-  UNIQUE(course_id, session_id)
+  -- A course is taught once per (study mode, semester) in a session, with its
+  -- own lecturer, class list and timetable slot: e.g. CYB201 full-time in
+  -- Harmattan and CYB201 conversion in semester 2 are two offerings.
+  study_mode TEXT NOT NULL DEFAULT 'full_time' CHECK (study_mode IN ('full_time','part_time','conversion')),
+  semester   INTEGER NOT NULL DEFAULT 1,
+  UNIQUE(course_id, session_id, study_mode, semester)
 );
 
 -- A course can be offered by several programmes (and so several colleges):
@@ -119,7 +147,8 @@ CREATE TABLE IF NOT EXISTS course_offerings (
 CREATE TABLE IF NOT EXISTS course_programmes (
   course_id    INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
   programme_id INTEGER NOT NULL REFERENCES programmes(id),
-  level        INTEGER,   -- optional: level at which THIS programme takes the course, if it differs
+  level        INTEGER,   -- optional: level at which THIS programme takes the course, if it differs from courses.level
+  semester     INTEGER,   -- optional: semester in which THIS programme takes it, if it differs from courses.semester
   linked_by    INTEGER REFERENCES users(id),
   created_at   TEXT NOT NULL DEFAULT (datetime('now')),
   source       TEXT NOT NULL DEFAULT 'manual',  -- 'manual' = picked/home; 'scope' = derived from courses.scope (re-synced automatically)

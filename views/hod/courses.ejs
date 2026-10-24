@@ -20,7 +20,11 @@
         <div class="col-md-2 mb-3"><label class="form-label">Units</label><input class="form-control" name="credit_units" type="number" value="3"></div>
       </div>
       <div class="row g-2">
-        <div class="col-md-4 mb-3">
+        <div class="col-md-3 mb-3"><label class="form-label">Course type</label>
+          <select class="form-select" name="course_type"><option value="compulsory">Compulsory</option><option value="elective">Elective</option></select></div>
+        <div class="col-md-3 mb-3"><label class="form-label">Semester</label>
+          <%- include('../partials/semester-select', { value: 1, cls: '' }) %></div>
+        <div class="col-md-3 mb-3">
           <label class="form-label">Home programme</label>
           <select class="form-select" name="programme_id">
             <option value="">— none —</option>
@@ -28,8 +32,8 @@
           </select>
           <% if (programmes.length > free.length) { %><div class="form-text">Programmes with a coordinator aren't listed.</div><% } %>
         </div>
-        <div class="col-md-3 mb-3">
-          <label class="form-label">Est. class size</label>
+        <div class="col-md-2 mb-3">
+          <label class="form-label">Est. size</label>
           <input class="form-control" name="expected_class_size" type="number" placeholder="optional">
         </div>
       </div>
@@ -43,6 +47,11 @@
     <p class="text-secondary small">Another department or college already runs it? Add it to one of your programmes instead of duplicating it.</p>
     <form method="POST" action="/hod/courses/link">
       <div class="mb-3"><label class="form-label">Course code</label><input class="form-control" name="code" required placeholder="GST201"></div>
+      <div class="row g-2">
+        <div class="col-6 mb-3"><label class="form-label">Level <span class="text-secondary small">(if different)</span></label><input class="form-control" name="level" type="number" placeholder="e.g. 200"></div>
+        <div class="col-6 mb-3"><label class="form-label">Semester <span class="text-secondary small">(if different)</span></label>
+          <select class="form-select" name="semester"><option value="">Same</option><% semesterChoices.forEach(function(o){ %><option value="<%= o.n %>"><%= o.label %></option><% }) %></select></div>
+      </div>
       <div class="mb-3"><label class="form-label">Programme</label>
         <select class="form-select" name="programme_id" required>
           <% free.forEach(function(p){ %><option value="<%= p.id %>"><%= p.name %></option><% }) %>
@@ -63,20 +72,26 @@
         table cells via the HTML form="" attribute — this avoids the invalid
         (and unsupported) pattern of a <form> element wrapping <td>s. %>
     <% courses.forEach(function(c){ %>
+      <form id="delete-<%= c.id %>" method="POST" action="/hod/courses/<%= c.id %>/delete"></form>
       <% if (['pending','rejected'].includes(c.status) && c.managed_by === 'hod') { %>
         <form id="edit-<%= c.id %>" method="POST" action="/hod/courses/<%= c.id %>/edit"></form>
-        <form id="delete-<%= c.id %>" method="POST" action="/hod/courses/<%= c.id %>/delete"></form>
       <% } else if (session && c.status === 'approved' && !c.offered_this_session) { %>
         <form id="offer-<%= c.id %>" method="POST" action="/hod/courses/<%= c.id %>/offer"></form>
       <% } %>
     <% }) %>
 
+    <form id="bulk-delete" method="POST" action="/hod/courses/bulk-delete"></form>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+      <span class="text-secondary small">Tick courses to remove several at once. Courses with student registrations or a published timetable are kept.</span>
+      <button form="bulk-delete" type="submit" class="btn btn-sm btn-danger" id="bulkDeleteBtn" disabled data-confirm="Delete the ticked courses? Their offerings and draft timetable slots go too."><i class="fa-solid fa-trash me-1"></i> Delete ticked (<span id="bulkCount">0</span>)</button>
+    </div>
     <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-      <thead><tr><th style="min-width:110px;">Code</th><th style="min-width:200px;">Title</th><th>Home programme</th><th>Offered by</th><th>Level</th><th>Units</th><th>Est. size</th><th>Status</th><th style="min-width:230px;"></th></tr></thead>
+      <thead><tr><th><input type="checkbox" class="form-check-input" id="selAll" title="Tick all"></th><th style="min-width:110px;">Code</th><th style="min-width:200px;">Title</th><th>Home programme</th><th>Offered by</th><th>Level</th><th>Semester</th><th>Type</th><th>Units</th><th>Est. size</th><th>Status</th><th style="min-width:230px;"></th></tr></thead>
       <tbody>
       <% courses.forEach(function(c){ %>
         <% const editable = ['pending','rejected'].includes(c.status) && c.managed_by === 'hod'; %>
         <tr>
+          <td><input type="checkbox" class="form-check-input sel-course" form="bulk-delete" name="course_ids" value="<%= c.id %>"></td>
           <% if (editable) { %>
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="code" value="<%= c.code %>" required></td>
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="title" value="<%= c.title %>" required></td>
@@ -88,6 +103,13 @@
             </td>
             <td><%- include('../partials/programme-badges', { list: linked[c.id], homeId: c.programme_id, info: scopes[c.id] }) %></td>
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="level" type="number" value="<%= c.level %>" style="width:80px;" required></td>
+            <td><%- include('../partials/semester-select', { value: c.semester, form: 'edit-' + c.id, cls: 'form-select-sm' }) %></td>
+            <td>
+              <select form="edit-<%= c.id %>" class="form-select form-select-sm" name="course_type" style="min-width:110px;">
+                <option value="compulsory" <%= c.course_type !== 'elective' ? 'selected' : '' %>>Compulsory</option>
+                <option value="elective" <%= c.course_type === 'elective' ? 'selected' : '' %>>Elective</option>
+              </select>
+            </td>
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="credit_units" type="number" value="<%= c.credit_units %>" style="width:70px;"></td>
             <td><input form="edit-<%= c.id %>" class="form-control form-control-sm" name="expected_class_size" type="number" value="<%= c.expected_class_size || '' %>" style="width:80px;" placeholder="—"></td>
             <td>
@@ -99,7 +121,8 @@
             <td class="d-flex gap-2 flex-wrap">
               <button form="edit-<%= c.id %>" class="btn btn-sm btn-gold" type="submit"><i class="fa-solid fa-check me-1"></i> Save<%= c.status === 'rejected' ? ' & resubmit' : '' %></button>
               <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#shareModal<%= c.id %>"><i class="fa-solid fa-share-nodes"></i></button>
-              <button form="delete-<%= c.id %>" class="btn btn-sm btn-danger" type="submit" data-confirm="Delete this course proposal?"><i class="fa-solid fa-trash"></i></button>
+              <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#placeModal<%= c.id %>" title="Level & semester per programme"><i class="fa-solid fa-layer-group"></i></button>
+              <button form="delete-<%= c.id %>" class="btn btn-sm btn-danger" type="submit" data-confirm="Delete <%= c.code %>?"><i class="fa-solid fa-trash"></i></button>
             </td>
           <% } else { %>
             <td class="font-monospace"><%= c.code %></td>
@@ -107,6 +130,8 @@
             <td class="text-secondary small"><%= c.programme_name || '—' %><% if (c.coordinator_name) { %><div class="form-text mb-0"><i class="fa-solid fa-user-tie me-1"></i>Coordinator: <%= c.coordinator_name %></div><% } %></td>
             <td><%- include('../partials/programme-badges', { list: linked[c.id], homeId: c.programme_id, info: scopes[c.id] }) %></td>
             <td><%= c.level %></td>
+            <td class="small"><%= semLabel('full_time', c.semester) %></td>
+            <td><%- include('../partials/course-type-badge', { type: c.course_type }) %></td>
             <td><%= c.credit_units %></td>
             <td><%= c.expected_class_size || '—' %></td>
             <td>
@@ -116,12 +141,14 @@
             <td class="d-flex gap-2 flex-wrap">
               <% if (c.managed_by === 'hod') { %>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#shareModal<%= c.id %>" title="Programmes that offer this course"><i class="fa-solid fa-share-nodes"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#placeModal<%= c.id %>" title="Level & semester per programme"><i class="fa-solid fa-layer-group"></i></button>
               <% } %>
               <% if (c.status === 'approved' && session && !c.offered_this_session) { %>
                 <button form="offer-<%= c.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-share me-1"></i> Offer this session</button>
               <% } else if (c.offered_this_session) { %>
                 <a class="btn btn-sm btn-outline-secondary" href="/hod/assign"><i class="fa-solid fa-chalkboard-user me-1"></i> Lecturer</a>
               <% } %>
+              <button form="delete-<%= c.id %>" class="btn btn-sm btn-outline-danger" type="submit" data-confirm="Delete <%= c.code %><%= c.offered_this_session ? ' and its offering this session' : '' %>?"><i class="fa-solid fa-trash"></i></button>
             </td>
           <% } %>
         </tr>
@@ -152,5 +179,22 @@
 </div></div>
 <% } %>
 
+<%- include('../partials/placements-modals', { courses: courses, linked: linked, actionBase: '/hod/courses', canManage: function(c){ return c.managed_by === 'hod'; } }) %>
 <%- include('../partials/share-modals', { courses: courses, linked: linked, allProgrammes: allProgrammes, scopes: scopes, actionBase: '/hod/courses', canManage: function(c){ return c.managed_by === 'hod'; } }) %>
 <% } %>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('.sel-course'));
+    var all = document.getElementById('selAll'), btn = document.getElementById('bulkDeleteBtn'), cnt = document.getElementById('bulkCount');
+    if (!all || !btn) return;
+    function refresh() {
+      var n = boxes.filter(function (b) { return b.checked; }).length;
+      cnt.textContent = n; btn.disabled = n === 0;
+      all.checked = n > 0 && n === boxes.length; all.indeterminate = n > 0 && n < boxes.length;
+    }
+    all.addEventListener('change', function () { boxes.forEach(function (b) { b.checked = all.checked; }); refresh(); });
+    boxes.forEach(function (b) { b.addEventListener('change', refresh); });
+    refresh();
+  });
+</script>

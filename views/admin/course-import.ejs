@@ -17,7 +17,7 @@
         <div class="mb-3">
           <label class="form-label" for="csv">Rows</label>
           <textarea class="form-control font-monospace" id="csv" name="csv" rows="12" required
-            placeholder="code,title,level,credit_units,department_code,programme_code,expected_class_size,also_offered_by&#10;CSC313,Operations Research,300,3,CSC,CS,60,&#10;GST201,General Studies II,200,2,CSC,CS,300,CSC:ICT|MEE:MEE"><%= csv %></textarea>
+            placeholder="code,title,level,credit_units,department_code,programme_code,expected_class_size,also_offered_by,course_type,semester&#10;CSC313,Operations Research,300,3,CSC,CS,60,,elective,1&#10;CYB201,Intro to Cyber Security,200,3,CSC,CYB,60,CSC:CS@300/2,compulsory,1"><%= csv %></textarea>
         </div>
         <div class="mb-3">
           <label class="form-label d-block">If a course code already exists</label>
@@ -57,7 +57,9 @@
           <tr><td class="font-monospace">department_code</td><td>The <strong>owning</strong> department's code (see below). <em>Required.</em> That department proposes the course and allocates its lecturer.</td></tr>
           <tr><td class="font-monospace">programme_code</td><td>Optional home programme within that department.</td></tr>
           <tr><td class="font-monospace">expected_class_size</td><td>Optional.</td></tr>
-          <tr><td class="font-monospace">also_offered_by</td><td>Optional. <strong>Courses shared by several programmes or colleges:</strong> list the other programmes as <code>DEPT:PROG</code>, separated by <code>|</code>, e.g. <code>MEE:MEE|CSC:ICT</code>. Put the cell in quotes if you use a comma.</td></tr>
+          <tr><td class="font-monospace">semester</td><td>Optional (last column): 1, 2 or 3 — the <strong>home</strong> programme's semester (1 = Harmattan, 2 = Rain for full/part-time; conversion uses 1–3). Defaults to 1.</td></tr>
+          <tr><td class="font-monospace">course_type</td><td>Optional (last column): <code>compulsory</code> or <code>elective</code>. Defaults to compulsory.</td></tr>
+          <tr><td class="font-monospace">also_offered_by</td><td>Optional. <strong>Courses shared by several programmes or colleges:</strong> list the other programmes as <code>DEPT:PROG</code>, separated by <code>|</code>, e.g. <code>MEE:MEE|CSC:ICT</code>. Another programme may take the course at a different level/semester: add <code>@level</code> or <code>@level/semester</code>, e.g. <code>CSC:CS@300/2</code> = Computer Science takes it at 300L in semester 2. Put the cell in quotes if you use a comma.</td></tr>
         </tbody>
       </table>
       <p class="small fw-medium mb-1">Department codes</p>

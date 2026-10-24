@@ -9,7 +9,7 @@ const { db } = require('../config/db');
  *
  * Returns { error } on validation failure, or { user } on success.
  */
-function createAccount({ role, name, email, password, confirmPassword, departmentId, collegeId, level }) {
+function createAccount({ role, name, email, password, confirmPassword, departmentId, collegeId, level, programmeId }) {
   const cleanEmail = (email || '').trim().toLowerCase();
   const cleanName = (name || '').trim();
 
@@ -28,6 +28,16 @@ function createAccount({ role, name, email, password, confirmPassword, departmen
   if (role === 'student' && !level) {
     return { error: 'Please select your level.' };
   }
+  // A student's programme decides their study mode and which semester/level of each course they see.
+  let progId = null;
+  if (role === 'student') {
+    const deptProgrammes = db.prepare('SELECT id FROM programmes WHERE department_id = ?').all(Number(departmentId));
+    if (deptProgrammes.length && !programmeId) return { error: 'Please select your programme.' };
+    if (programmeId) {
+      if (!deptProgrammes.find(p => String(p.id) === String(programmeId))) return { error: 'That programme is not in the department you selected.' };
+      progId = Number(programmeId);
+    }
+  }
   if (role === 'dean' && !collegeId) {
     return { error: 'Please select a college.' };
   }
@@ -43,9 +53,9 @@ function createAccount({ role, name, email, password, confirmPassword, departmen
   const lvl = role === 'student' ? Number(level) : null;
 
   const result = db.prepare(`
-    INSERT INTO users (name, email, password_hash, role, department_id, college_id, level)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(cleanName, cleanEmail, hash, role, deptId, collId, lvl);
+    INSERT INTO users (name, email, password_hash, role, department_id, college_id, level, programme_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(cleanName, cleanEmail, hash, role, deptId, collId, lvl, progId);
   const newUserId = result.lastInsertRowid;
 
   // If the seat is currently open, seat this new HOD/Dean as the
