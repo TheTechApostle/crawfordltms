@@ -52,7 +52,7 @@ router.get('/', (req, res) => {
     const rows = db.prepare(`
       SELECT te.status, COUNT(*) c FROM timetable_entries te
       JOIN course_offerings co ON co.id = te.offering_id
-      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} GROUP BY te.status
+      WHERE co.session_id = ? GROUP BY te.status
     `).all(session.id);
     rows.forEach(r => statusCounts[r.status] = r.c);
     shortfalls = db.prepare(`
@@ -60,7 +60,7 @@ router.get('/', (req, res) => {
       FROM timetable_entries te
       JOIN course_offerings co ON co.id = te.offering_id
       JOIN courses c ON c.id = co.course_id
-      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND te.status = 'shortfall'
+      WHERE co.session_id = ? AND te.status = 'shortfall'
     `).all(session.id);
   }
   res.render('admin/dashboard', { title: 'Registrar dashboard', session, counts, statusCounts, shortfalls });
@@ -69,28 +69,7 @@ router.get('/', (req, res) => {
 // ---------- Sessions ----------
 router.get('/sessions', (req, res) => {
   const sessions = db.prepare('SELECT * FROM academic_sessions ORDER BY id DESC').all();
-  const semesters = db.prepare('SELECT * FROM semesters ORDER BY calendar, number').all();
-  res.render('admin/sessions', { title: 'Academic sessions', sessions, semesters });
-});
-
-// Which semester each calendar is in right now (registration, timetabling and
-// the lecturer/student portals follow these).
-router.post('/sessions/:id/current-semester', (req, res) => {
-  const reg = Number(req.body.regular_semester), conv = Number(req.body.conversion_semester);
-  attempt(req, res, '/admin/sessions', 'Current semesters updated.', () => {
-    const okReg = db.prepare("SELECT 1 FROM semesters WHERE calendar = 'regular' AND number = ?").get(reg);
-    const okConv = db.prepare("SELECT 1 FROM semesters WHERE calendar = 'conversion' AND number = ?").get(conv);
-    if (!okReg || !okConv) { flash(req, 'error', 'Pick a valid semester for each calendar.'); return false; }
-    db.prepare('UPDATE academic_sessions SET regular_semester = ?, conversion_semester = ? WHERE id = ?').run(reg, conv, req.params.id);
-  });
-});
-
-router.post('/semesters/:calendar/:number/rename', (req, res) => {
-  attempt(req, res, '/admin/sessions', 'Semester renamed.', () => {
-    const name = (req.body.name || '').trim();
-    if (!name) { flash(req, 'error', 'A semester needs a name.'); return false; }
-    db.prepare('UPDATE semesters SET name = ? WHERE calendar = ? AND number = ?').run(name, req.params.calendar, req.params.number);
-  });
+  res.render('admin/sessions', { title: 'Academic sessions', sessions });
 });
 
 router.post('/sessions', (req, res) => {
@@ -264,11 +243,10 @@ function coordinatorOk(req, coordinatorId) {
 
 router.post('/programmes', (req, res) => {
   const { name, code, department_id, coordinator_id } = req.body;
-  const mode = access.MODES[req.body.study_mode] ? req.body.study_mode : 'full_time';
   attempt(req, res, '/admin/programmes', 'Programme added.', () => {
     if (!coordinatorOk(req, coordinator_id)) return false;
-    db.prepare('INSERT INTO programmes (name, code, department_id, coordinator_id, study_mode) VALUES (?, ?, ?, ?, ?)')
-      .run(name, code, department_id, coordinator_id || null, mode);
+    db.prepare('INSERT INTO programmes (name, code, department_id, coordinator_id) VALUES (?, ?, ?, ?)')
+      .run(name, code, department_id, coordinator_id || null);
     access.syncAllScopes(); // department-wide / all-programme courses pick the new programme up
   });
 });
@@ -277,8 +255,8 @@ router.post('/programmes/:id/edit', (req, res) => {
   const { name, code, department_id, coordinator_id } = req.body;
   attempt(req, res, '/admin/programmes', 'Programme updated.', () => {
     if (!coordinatorOk(req, coordinator_id)) return false;
-    db.prepare('UPDATE programmes SET name = ?, code = ?, department_id = ?, coordinator_id = ?, study_mode = ? WHERE id = ?')
-      .run(name, code, department_id, coordinator_id || null, access.MODES[req.body.study_mode] ? req.body.study_mode : 'full_time', req.params.id);
+    db.prepare('UPDATE programmes SET name = ?, code = ?, department_id = ?, coordinator_id = ? WHERE id = ?')
+      .run(name, code, department_id, coordinator_id || null, req.params.id);
     access.syncAllScopes();
   });
 });
@@ -297,16 +275,14 @@ router.post('/programmes/:id/delete', (req, res) => {
 // ---------- Courses ----------
 router.get('/courses', (req, res) => {
   const session = activeSession();
-  const deptFilter = req.query.department_id ? Number(req.query.department_id) : '';
   const courses = db.prepare(`
     SELECT c.*, d.name AS dept_name, p.name AS programme_name,
            (SELECT COUNT(*) FROM course_offerings co WHERE co.course_id = c.id) AS offering_count
     FROM courses c
     JOIN departments d ON d.id = c.department_id
     LEFT JOIN programmes p ON p.id = c.programme_id
-    ${deptFilter ? 'WHERE c.department_id = ?' : ''}
     ORDER BY c.code
-  `).all(...(deptFilter ? [deptFilter] : []));
+  `).all();
   const departments = db.prepare('SELECT * FROM departments ORDER BY name').all();
   const programmes = db.prepare('SELECT * FROM programmes ORDER BY name').all();
   const allProgrammes = access.allProgrammesWithCollege();
@@ -323,13 +299,12 @@ router.get('/courses', (req, res) => {
       WHERE co.session_id = ?
     `).all(session.id);
   }
-  res.render('admin/courses', { title: 'Courses', courses, departments, programmes, allProgrammes, linked, scopes, session, offerings, deptFilter });
+  res.render('admin/courses', { title: 'Courses', courses, departments, programmes, allProgrammes, linked, scopes, session, offerings });
 });
 
 function courseFields(body) {
-  const { code, title, credit_units, department_id, programme_id, level, expected_class_size, course_type, semester } = body;
-  return [(code || '').trim(), (title || '').trim(), credit_units || 3, department_id, programme_id || null, level, expected_class_size || null,
-          access.normalizeCourseType(course_type) || 'compulsory', [1, 2, 3].includes(Number(semester)) ? Number(semester) : 1];
+  const { code, title, credit_units, department_id, programme_id, level, expected_class_size } = body;
+  return [(code || '').trim(), (title || '').trim(), credit_units || 3, department_id, programme_id || null, level, expected_class_size || null];
 }
 
 router.post('/courses', (req, res) => {
@@ -338,8 +313,8 @@ router.post('/courses', (req, res) => {
     // The registrar has full authority — a course they add goes straight to
     // 'approved', skipping the Dean review that an HOD-proposed course needs.
     const r = db.prepare(`
-      INSERT INTO courses (code, title, credit_units, department_id, programme_id, level, expected_class_size, course_type, semester, status, created_by)
-      VALUES (?,?,?,?,?,?,?,?,?,'approved',?)
+      INSERT INTO courses (code, title, credit_units, department_id, programme_id, level, expected_class_size, status, created_by)
+      VALUES (?,?,?,?,?,?,?,'approved',?)
     `).run(...f, req.session.user.id);
     access.applySharing({ id: r.lastInsertRowid, programme_id: f[4] }, req.body, req.session.user.id);
   });
@@ -349,7 +324,7 @@ router.post('/courses/:id/edit', (req, res) => {
   const f = courseFields(req.body);
   attempt(req, res, '/admin/courses', 'Course updated.', () => {
     db.prepare(`
-      UPDATE courses SET code = ?, title = ?, credit_units = ?, department_id = ?, programme_id = ?, level = ?, expected_class_size = ?, course_type = ?, semester = ?
+      UPDATE courses SET code = ?, title = ?, credit_units = ?, department_id = ?, programme_id = ?, level = ?, expected_class_size = ?
       WHERE id = ?
     `).run(...f, req.params.id);
     // Changing the home programme must keep it among the programmes offering the course.
@@ -366,37 +341,13 @@ router.post('/courses/:id/programmes', (req, res) => {
   });
 });
 
-// Delete one course, or (below) every ticked course — typically a whole
-// department's. Courses with student registrations or a published timetable
-// are kept and reported.
-// Level and semester at which each *other* programme takes this course
-// (the course's own level/semester are the home programme's). Blank = same.
-router.post('/courses/:id/placements', (req, res) => {
-  attempt(req, res, '/admin/courses', 'Levels and semesters updated.', () => {
-    const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(req.params.id);
-    if (!course) return false;
-    db.prepare('SELECT programme_id FROM course_programmes WHERE course_id = ?').all(course.id).forEach(l => {
-      if (l.programme_id === course.programme_id) return;
-      if (('level_' + l.programme_id) in req.body) access.setPlacement(course.id, l.programme_id, req.body['level_' + l.programme_id], req.body['semester_' + l.programme_id]);
-    });
-  });
-});
-
 router.post('/courses/:id/delete', (req, res) => {
-  const back = req.body.return_to && String(req.body.return_to).startsWith('/admin/courses') && !String(req.body.return_to).startsWith('//') ? req.body.return_to : '/admin/courses';
-  attempt(req, res, back, null, () => {
-    const r = access.deleteCourses([req.params.id]);
-    flash(req, r.deleted.length ? 'success' : 'error', r.deleted.length ? 'Course deleted.' : `Course kept: ${r.blocked.map(b => b.reason).join('; ')}.`);
-  });
-});
-
-router.post('/courses/bulk-delete', (req, res) => {
-  const back = req.body.return_to && String(req.body.return_to).startsWith('/admin/courses') && !String(req.body.return_to).startsWith('//') ? req.body.return_to : '/admin/courses';
-  attempt(req, res, back, null, () => {
-    const ids = [].concat(req.body.course_ids || []);
-    if (!ids.length) { flash(req, 'error', 'Tick the courses you want to delete first.'); return; }
-    const r = access.deleteCourses(ids);
-    flash(req, r.deleted.length ? 'success' : 'error', access.deleteSummary(r));
+  attempt(req, res, '/admin/courses', 'Course deleted.', () => {
+    const hasOfferings = db.prepare('SELECT 1 FROM course_offerings WHERE course_id = ?').get(req.params.id);
+    if (hasOfferings) { flash(req, 'error', 'This course has already been offered in a session, so it can\'t be deleted.'); return false; }
+    db.prepare('DELETE FROM course_programmes WHERE course_id = ?').run(req.params.id);
+    db.prepare('DELETE FROM course_departments WHERE course_id = ?').run(req.params.id);
+    db.prepare('DELETE FROM courses WHERE id = ?').run(req.params.id);
   });
 });
 
@@ -418,11 +369,9 @@ router.post('/courses/:id/offer', (req, res) => {
   if (!session) return res.redirect('/admin/courses');
   const course = db.prepare('SELECT * FROM courses WHERE id = ?').get(req.params.id);
   if (!course || course.status !== 'approved') return res.redirect('/admin/courses');
-  const made = access.offerCourse(course.id, session.id);
-  const label = access.makeSemLabel();
-  flash(req, 'success', made.length
-    ? `${course.code} offered: ${made.map(m => `${access.MODES[m.study_mode]} · ${label(m.study_mode, m.semester)}`).join(', ')}.`
-    : `${course.code} is already offered for every study mode and semester it runs in.`);
+  try {
+    db.prepare('INSERT INTO course_offerings (course_id, session_id) VALUES (?, ?)').run(req.params.id, session.id);
+  } catch (e) { /* already offered this session */ }
   res.redirect('/admin/courses');
 });
 
@@ -436,7 +385,7 @@ router.post('/courses/:id/offer', (req, res) => {
 //   course — in this or any other college — separated by "|", each written as
 //   DEPT:PROG (e.g. ENG:EEE|MTH:MTH). That's how a service course shared by
 //   several programmes/colleges is loaded in one row.
-const CSV_COLUMNS = ['code', 'title', 'level', 'credit_units', 'department_code', 'programme_code', 'expected_class_size', 'also_offered_by', 'course_type', 'semester'];
+const CSV_COLUMNS = ['code', 'title', 'level', 'credit_units', 'department_code', 'programme_code', 'expected_class_size', 'also_offered_by'];
 
 router.get('/courses/import', (req, res) => {
   res.render('admin/course-import', { title: 'Bulk upload courses', result: null, csv: '', mode: 'skip' });
@@ -447,9 +396,9 @@ router.get('/courses/template.csv', (req, res) => {
   res.setHeader('Content-Disposition', 'attachment; filename="courses-template.csv"');
   res.send([
     CSV_COLUMNS.join(','),
-    'CSC313,Operations Research,300,3,CSC,CS,60,,elective,1',
-    'GST201,General Studies II,200,2,CSC,CS,300,ALL,compulsory,1',
-    'CYB201,Intro to Cyber Security,300,3,CSC,CS,60,CSC:CYB@200/1,compulsory,2',
+    'CSC313,Operations Research,300,3,CSC,CS,60,',
+    'GST201,General Studies II,200,2,CSC,CS,300,ALL',
+    'ENG101,Engineering Drawing,100,2,MEE,MEE,200,"CSC:*|MTH:MTH"',
     'MTH301,Numerical Analysis,300,3,MTH,MTH,45,CSC:CS',
     '',
   ].join('\n'));
@@ -490,11 +439,11 @@ router.post('/courses/import', (req, res) => {
 
   const exists = db.prepare('SELECT * FROM courses WHERE code = ?');
   const insert = db.prepare(`
-    INSERT INTO courses (code, title, credit_units, department_id, programme_id, level, expected_class_size, course_type, semester, status, created_by)
-    VALUES (?,?,?,?,?,?,?,?,?,'approved',?)
+    INSERT INTO courses (code, title, credit_units, department_id, programme_id, level, expected_class_size, status, created_by)
+    VALUES (?,?,?,?,?,?,?,'approved',?)
   `);
   const upd = db.prepare(`
-    UPDATE courses SET title = ?, credit_units = ?, department_id = ?, programme_id = ?, level = ?, expected_class_size = ?, course_type = ?, semester = ?
+    UPDATE courses SET title = ?, credit_units = ?, department_id = ?, programme_id = ?, level = ?, expected_class_size = ?
     WHERE id = ?
   `);
 
@@ -503,7 +452,7 @@ router.post('/courses/import', (req, res) => {
   try {
     rows.slice(start).forEach((cells, i) => {
       const line = i + start + 1;
-      const [code, title, level, units, deptCode, progCode, size, also, typeCell, semCell] = cells;
+      const [code, title, level, units, deptCode, progCode, size, also] = cells;
       if (!code || !title || !level || !deptCode) {
         errors.push(`Row ${line}: needs at least code, title, level and department_code — got "${cells.join(',')}"`); return;
       }
@@ -514,12 +463,8 @@ router.post('/courses/import', (req, res) => {
       if (home.error) { errors.push(`Row ${line} (${code}): ${home.error}`); return; }
       if (home.p && home.p.department_id !== dept.id) { errors.push(`Row ${line} (${code}): programme "${progCode}" does not belong to ${dept.code}`); return; }
       const extra = [];
-      let scope = null; const scopeDepts = []; const placements = [];
-      for (let ref of (also || '').split('|').map(r => r.trim()).filter(Boolean)) {
-        // Optional "@level" or "@level/semester" suffix: the level/semester THAT programme takes the course at.
-        let pLevel = null, pSem = null;
-        const at = ref.match(/^(.*?)@(\d+)(?:\/(\d+))?$/);
-        if (at) { ref = at[1].trim(); pLevel = Number(at[2]); pSem = at[3] ? Number(at[3]) : null; }
+      let scope = null; const scopeDepts = [];
+      for (const ref of (also || '').split('|').map(r => r.trim()).filter(Boolean)) {
         if (ref.toUpperCase() === 'ALL') { scope = 'all'; continue; }          // every programme in the university
         if (/^[^:]+:\*$/.test(ref)) {                                          // DEPT:* = every programme of a department
           const d = deptByCode[ref.slice(0, -2).toLowerCase()];
@@ -529,28 +474,21 @@ router.post('/courses/import', (req, res) => {
         const r = resolveProgramme(ref, null);
         if (r.error) { errors.push(`Row ${line} (${code}): ${r.error}`); return; }
         extra.push(r.p.id);
-        if (pLevel || pSem) placements.push({ pid: r.p.id, level: pLevel, semester: pSem });
       }
-      const ctype = access.normalizeCourseType(typeCell);
-      if (!ctype) { errors.push(`Row ${line} (${code}): course_type "${typeCell}" must be compulsory or elective`); return; }
-      const semN = semCell ? Number(semCell) : 1;
-      if (![1, 2, 3].includes(semN)) { errors.push(`Row ${line} (${code}): semester "${semCell}" must be 1, 2 or 3`); return; }
       const unitsN = units ? Number(units) : 3;
       const sizeN = size ? Number(size) : null;
       const homeId = home.p ? home.p.id : null;
       const existing = exists.get(code);
       if (existing) {
         if (!update) { skipped.push(`${code} already exists`); return; }
-        upd.run(title, unitsN, dept.id, homeId, Number(level), sizeN, ctype, semN, existing.id);
+        upd.run(title, unitsN, dept.id, homeId, Number(level), sizeN, existing.id);
         access.setCourseProgrammes(existing.id, extra.concat((db.prepare("SELECT programme_id FROM course_programmes WHERE course_id = ? AND source = 'manual'").all(existing.id)).map(r => r.programme_id)), homeId, req.session.user.id);
         if (scope) access.setCourseScope(existing.id, scope, scopeDepts);
-        placements.forEach(pl => access.setPlacement(existing.id, pl.pid, pl.level, pl.semester));
         updated.push(code);
       } else {
-        const r = insert.run(code, title, unitsN, dept.id, homeId, Number(level), sizeN, ctype, semN, req.session.user.id);
+        const r = insert.run(code, title, unitsN, dept.id, homeId, Number(level), sizeN, req.session.user.id);
         access.setCourseProgrammes(r.lastInsertRowid, extra, homeId, req.session.user.id);
         if (scope) access.setCourseScope(r.lastInsertRowid, scope, scopeDepts);
-        placements.forEach(pl => access.setPlacement(r.lastInsertRowid, pl.pid, pl.level, pl.semester));
         created.push(code);
       }
     });
@@ -652,7 +590,7 @@ router.get('/allocation', (req, res) => {
       LEFT JOIN users u ON u.id = co.lecturer_id
       LEFT JOIN venues v ON v.id = te.venue_id
       LEFT JOIN timeslots ts ON ts.id = te.timeslot_id
-      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING}
+      WHERE co.session_id = ?
       ORDER BY co.registered_count DESC
     `).all(session.id);
   }
@@ -696,7 +634,7 @@ router.get('/timetable', (req, res) => {
       LEFT JOIN users u ON u.id = co.lecturer_id
       LEFT JOIN venues v ON v.id = te.venue_id
       LEFT JOIN timeslots ts ON ts.id = te.timeslot_id
-      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND te.status != 'rejected' AND te.timeslot_id IS NOT NULL
+      WHERE co.session_id = ? AND te.status != 'rejected' AND te.timeslot_id IS NOT NULL
     `;
     const params = [session.id];
     if (departmentId) {
@@ -723,7 +661,7 @@ router.get('/publish', (req, res) => {
       JOIN courses c ON c.id = co.course_id
       LEFT JOIN venues v ON v.id = te.venue_id
       LEFT JOIN timeslots ts ON ts.id = te.timeslot_id
-      WHERE co.session_id = ? AND ${access.CURRENT_OFFERING} AND te.status = 'final'
+      WHERE co.session_id = ? AND te.status = 'final'
     `).all(session.id);
   }
   res.render('admin/publish', { title: 'Publish queue', session, entries });
@@ -767,11 +705,9 @@ function renderStudents(req, res, result) {
   const page = Math.min(Math.max(1, Number(req.query.page) || 1), pages);
 
   const students = db.prepare(`
-    SELECT u.id, u.name, u.email, u.department_id, u.level, u.programme_id, u.created_at, d.name AS dept_name, d.code AS dept_code,
-           pr.name AS programme_name, pr.study_mode,
+    SELECT u.id, u.name, u.email, u.department_id, u.level, u.created_at, d.name AS dept_name, d.code AS dept_code,
            (SELECT COUNT(*) FROM enrollments e WHERE e.student_id = u.id) AS enrollment_count
     FROM users u LEFT JOIN departments d ON d.id = u.department_id
-    LEFT JOIN programmes pr ON pr.id = u.programme_id
     WHERE ${W}
     ORDER BY u.name COLLATE NOCASE
     LIMIT ? OFFSET ?
@@ -796,7 +732,6 @@ function renderStudents(req, res, result) {
   const levels = db.prepare("SELECT DISTINCT level FROM users WHERE role = 'student' AND level IS NOT NULL ORDER BY level").all().map(r => r.level);
   res.render('admin/students', {
     title: 'Students', students, departments, levels, result: result || null,
-    programmes: db.prepare('SELECT id, name, department_id, study_mode FROM programmes ORDER BY name').all(),
     filters: { q, deptId, level, per }, pager: { page, pages, total, per, from: total ? (page - 1) * per + 1 : 0, to: Math.min(page * per, total) },
   });
 }
@@ -804,34 +739,28 @@ function renderStudents(req, res, result) {
 router.get('/students', (req, res) => renderStudents(req, res, null));
 
 router.post('/students', (req, res) => {
-  const { name, email, department_id, level, password, programme_id } = req.body;
+  const { name, email, department_id, level, password } = req.body;
   attempt(req, res, studentsBack(req), 'Student added.', () => {
-    if (programme_id && !db.prepare('SELECT 1 FROM programmes WHERE id = ? AND department_id = ?').get(programme_id, department_id)) {
-      flash(req, 'error', 'That programme is not in the selected department.'); return false;
-    }
     const pw = password && password.length >= 8 ? password : 'password123';
     if (!(name || '').trim() || !(email || '').trim() || !department_id || !level) {
       flash(req, 'error', 'Name, email, department and level are all required.'); return false;
     }
-    db.prepare("INSERT INTO users (name, email, password_hash, role, department_id, level, programme_id) VALUES (?,?,?,'student',?,?,?)")
-      .run(name.trim(), email.trim().toLowerCase(), bcrypt.hashSync(pw, 10), department_id, Number(level), programme_id || null);
+    db.prepare("INSERT INTO users (name, email, password_hash, role, department_id, level) VALUES (?,?,?,'student',?,?)")
+      .run(name.trim(), email.trim().toLowerCase(), bcrypt.hashSync(pw, 10), department_id, Number(level));
   });
 });
 
 router.post('/students/:id/edit', (req, res) => {
-  const { name, email, department_id, level, new_password, programme_id } = req.body;
+  const { name, email, department_id, level, new_password } = req.body;
   attempt(req, res, studentsBack(req), 'Student details updated.', () => {
-    if (programme_id && !db.prepare('SELECT 1 FROM programmes WHERE id = ? AND department_id = ?').get(programme_id, department_id)) {
-      flash(req, 'error', 'That programme is not in the selected department.'); return false;
-    }
     const stu = db.prepare("SELECT * FROM users WHERE id = ? AND role = 'student'").get(req.params.id);
     if (!stu) return false;
     if (!(name || '').trim() || !(email || '').trim() || !department_id || !level) {
       flash(req, 'error', 'Name, email, department and level can\'t be left blank.'); return false;
     }
     if (new_password && new_password.length < 8) { flash(req, 'error', 'A new password must be at least 8 characters.'); return false; }
-    db.prepare('UPDATE users SET name = ?, email = ?, department_id = ?, level = ?, programme_id = ? WHERE id = ?')
-      .run(name.trim(), email.trim().toLowerCase(), department_id, Number(level), programme_id || null, stu.id);
+    db.prepare('UPDATE users SET name = ?, email = ?, department_id = ?, level = ? WHERE id = ?')
+      .run(name.trim(), email.trim().toLowerCase(), department_id, Number(level), stu.id);
     if (new_password) db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(new_password, 10), stu.id);
   });
 });
@@ -847,14 +776,14 @@ router.post('/students/import', (req, res) => {
   const created = [];
   const errors = [];
   const insert = db.prepare(`
-    INSERT INTO users (name, email, password_hash, role, department_id, level, programme_id)
-    VALUES (?, ?, ?, 'student', ?, ?, ?)
+    INSERT INTO users (name, email, password_hash, role, department_id, level)
+    VALUES (?, ?, ?, 'student', ?, ?)
   `);
   const existsStmt = db.prepare('SELECT id FROM users WHERE email = ?');
 
   lines.forEach((line, i) => {
     const parts = line.split(',').map(p => p.trim());
-    const [name, email, deptCode, level, progCode] = parts;
+    const [name, email, deptCode, level] = parts;
     if (!name || !email || !deptCode || !level) {
       errors.push(`Line ${i + 1}: expected "name,email,department_code,level" — got "${line}"`);
       return;
@@ -868,14 +797,8 @@ router.post('/students/import', (req, res) => {
       errors.push(`Line ${i + 1}: ${email} is already registered`);
       return;
     }
-    let progId = null;
-    if (progCode) {
-      const pr = db.prepare('SELECT id FROM programmes WHERE department_id = ? AND code = ? COLLATE NOCASE').get(dept.id, progCode);
-      if (!pr) { errors.push(`Line ${i + 1}: unknown programme code "${progCode}" in ${dept.code}`); return; }
-      progId = pr.id;
-    }
     const hash = bcrypt.hashSync(pw, 10);
-    insert.run(name, email.toLowerCase(), hash, dept.id, Number(level), progId);
+    insert.run(name, email.toLowerCase(), hash, dept.id, Number(level));
     created.push({ name, email });
   });
 

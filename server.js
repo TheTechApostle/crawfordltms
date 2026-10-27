@@ -28,20 +28,6 @@ app.use(session({
 }));
 
 app.use(exposeUser);
-// Study-mode / semester labels available in every view: modeLabel('conversion'),
-// semLabel('full_time', 2) -> 'Rain', modeShort('part_time') -> 'PT'.
-app.use((req, res, next) => {
-  const access = require('./services/courseAccess');
-  res.locals.MODES = access.MODES;
-  res.locals.modeLabel = m => access.MODES[m] || m;
-  res.locals.modeShort = m => access.MODE_SHORT[m] || m;
-  res.locals.semLabel = access.makeSemLabel();
-  res.locals.semOptions = access.semestersFor;               // semOptions('conversion') -> [{number,name}]
-  // Choices for a course's own (home) semester: "1 · Harmattan / First Semester", ...
-  const names = {}; db.prepare('SELECT number, name FROM semesters ORDER BY calendar, number').all().forEach(r => { (names[r.number] = names[r.number] || []).push(r.name); });
-  res.locals.semesterChoices = Object.keys(names).map(n => ({ n: Number(n), label: `${n} · ${[...new Set(names[n])].join(' / ')}` }));
-  next();
-});
 
 // ---------- Auth ----------
 app.get('/login', (req, res) => {
@@ -88,27 +74,25 @@ app.get('/register', (req, res) => {
     if (req.session.user) return res.redirect('/');
     const departments = db.prepare('SELECT * FROM departments ORDER BY name').all();
     const colleges = db.prepare('SELECT * FROM colleges ORDER BY name').all();
-    const programmes = db.prepare('SELECT * FROM programmes ORDER BY name').all();
     res.render(`auth/register-${role}`, {
-      title: `Register as ${ROLE_LABELS[role]}`, layout: false, departments, colleges, programmes, form: {},
+      title: `Register as ${ROLE_LABELS[role]}`, layout: false, departments, colleges, form: {},
     });
   });
 
   app.post(`/register/${role}`, (req, res) => {
     const departments = db.prepare('SELECT * FROM departments ORDER BY name').all();
     const colleges = db.prepare('SELECT * FROM colleges ORDER BY name').all();
-    const programmes = db.prepare('SELECT * FROM programmes ORDER BY name').all();
-    const { name, email, password, confirm_password, department_id, college_id, level, programme_id } = req.body;
+    const { name, email, password, confirm_password, department_id, college_id, level } = req.body;
 
     const result = createAccount({
       role, // hardcoded per-route — never taken from req.body
       name, email, password, confirmPassword: confirm_password,
-      departmentId: department_id, collegeId: college_id, level, programmeId: programme_id,
+      departmentId: department_id, collegeId: college_id, level,
     });
 
     if (result.error) {
       return res.render(`auth/register-${role}`, {
-        title: `Register as ${ROLE_LABELS[role]}`, layout: false, departments, colleges, programmes,
+        title: `Register as ${ROLE_LABELS[role]}`, layout: false, departments, colleges,
         error: result.error, form: req.body,
       });
     }

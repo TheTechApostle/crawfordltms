@@ -1,4 +1,0 @@
-<%# A course's own (home) semester. Variables: `value` (current number), `form` (optional form id), `cls`. %>
-<select <%- (typeof form !== 'undefined' && form) ? 'form="' + form + '"' : '' %> class="form-select <%= typeof cls !== 'undefined' ? cls : '' %>" name="semester" style="min-width:150px;">
-  <% semesterChoices.forEach(function(o){ %><option value="<%= o.n %>" <%= Number(value) === o.n ? 'selected' : '' %>><%= o.label %></option><% }) %>
-</select>

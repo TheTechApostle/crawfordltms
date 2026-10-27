@@ -10,32 +10,16 @@
       <% sessions.forEach(function(s){ %>
         <form id="edit-session-<%= s.id %>" method="POST" action="/admin/sessions/<%= s.id %>/edit"></form>
         <form id="delete-session-<%= s.id %>" method="POST" action="/admin/sessions/<%= s.id %>/delete"></form>
-        <form id="sem-session-<%= s.id %>" method="POST" action="/admin/sessions/<%= s.id %>/current-semester"></form>
       <% }) %>
 
       <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-        <thead><tr><th>Name</th><th>Status</th><th>Registration</th><th style="min-width:300px;">Current semester</th><th style="min-width:280px;"></th></tr></thead>
+        <thead><tr><th>Name</th><th>Status</th><th>Registration</th><th style="min-width:280px;"></th></tr></thead>
         <tbody>
         <% sessions.forEach(function(s){ %>
           <tr>
             <td><input form="edit-session-<%= s.id %>" class="form-control form-control-sm" name="name" value="<%= s.name %>" required></td>
             <td><%- s.is_active ? '<span class="badge badge-published">active</span>' : '<span class="badge badge-draft">inactive</span>' %></td>
             <td><%- s.reg_locked ? '<span class="badge badge-shortfall">locked</span>' : '<span class="badge badge-final">open</span>' %></td>
-            <td>
-              <div class="d-flex gap-1 align-items-center mb-1">
-                <span class="small text-secondary" style="width:96px;">Full/Part-time</span>
-                <select form="sem-session-<%= s.id %>" name="regular_semester" class="form-select form-select-sm">
-                  <% semesters.filter(function(x){ return x.calendar === 'regular'; }).forEach(function(x){ %><option value="<%= x.number %>" <%= s.regular_semester === x.number ? 'selected' : '' %>><%= x.name %></option><% }) %>
-                </select>
-              </div>
-              <div class="d-flex gap-1 align-items-center">
-                <span class="small text-secondary" style="width:96px;">Conversion</span>
-                <select form="sem-session-<%= s.id %>" name="conversion_semester" class="form-select form-select-sm">
-                  <% semesters.filter(function(x){ return x.calendar === 'conversion'; }).forEach(function(x){ %><option value="<%= x.number %>" <%= s.conversion_semester === x.number ? 'selected' : '' %>><%= x.name %></option><% }) %>
-                </select>
-                <button form="sem-session-<%= s.id %>" class="btn btn-sm btn-outline-secondary" type="submit" title="Save current semesters"><i class="fa-solid fa-check"></i></button>
-              </div>
-            </td>
             <td class="d-flex gap-2 flex-wrap">
               <button form="edit-session-<%= s.id %>" class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check me-1"></i> Save</button>
               <form method="POST" action="/admin/sessions/<%= s.id %>/activate">
@@ -59,8 +43,7 @@
       <form method="POST" action="/admin/sessions">
         <div class="mb-3">
           <label for="name" class="form-label">Session name</label>
-          <input class="form-control" id="name" name="name" required placeholder="2025/2026">
-          <div class="form-text">One session per academic year. Which semester each calendar is in (Harmattan / Rain, or the conversion semesters) is set per session in the table.</div>
+          <input class="form-control" id="name" name="name" required placeholder="2025/2026 - First Semester">
         </div>
         <button class="btn btn-gold" type="submit"><i class="fa-solid fa-plus me-1"></i> Create session</button>
       </form>
@@ -68,22 +51,3 @@
     </div></div>
   </div>
 </div>
-
-<div class="card mt-3"><div class="card-body">
-  <h2 class="h6 card-title"><i class="fa-solid fa-calendar-week me-1 text-secondary"></i> Semesters</h2>
-  <p class="text-secondary small">Full-time and part-time programmes run the <strong>Harmattan</strong> and <strong>Rain</strong> semesters; conversion (HND → BSc) programmes run <strong>three</strong> semesters. Rename them here if your calendar uses different names.</p>
-  <div class="row g-3">
-    <% [['regular','Full-time & Part-time'],['conversion','Conversion (HND → BSc)']].forEach(function(cal){ %>
-      <div class="col-md-6">
-        <div class="fw-medium small text-uppercase text-secondary mb-2"><%= cal[1] %></div>
-        <% semesters.filter(function(x){ return x.calendar === cal[0]; }).forEach(function(x){ %>
-          <form method="POST" action="/admin/semesters/<%= x.calendar %>/<%= x.number %>/rename" class="d-flex gap-2 mb-2">
-            <span class="badge bg-light text-dark border align-self-center" style="width:28px;"><%= x.number %></span>
-            <input class="form-control form-control-sm" name="name" value="<%= x.name %>" required>
-            <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="fa-solid fa-check"></i></button>
-          </form>
-        <% }) %>
-      </div>
-    <% }) %>
-  </div>
-</div></div>

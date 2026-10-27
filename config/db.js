@@ -123,59 +123,8 @@ if (!hasColumn('course_offerings', 'allocation_status')) {
 if (!hasColumn('courses', 'scope')) {
   db.exec("ALTER TABLE courses ADD COLUMN scope TEXT NOT NULL DEFAULT 'programmes'");
 }
-if (!hasColumn('courses', 'course_type')) {
-  // Existing courses become 'compulsory' until the department marks the electives.
-  db.exec("ALTER TABLE courses ADD COLUMN course_type TEXT NOT NULL DEFAULT 'compulsory' CHECK (course_type IN ('compulsory','elective'))");
-}
 if (!hasColumn('course_programmes', 'source')) {
   db.exec("ALTER TABLE course_programmes ADD COLUMN source TEXT NOT NULL DEFAULT 'manual'");
-}
-
-// 2b. Level / semester / study-mode support.
-if (!hasColumn('programmes', 'study_mode')) {
-  db.exec("ALTER TABLE programmes ADD COLUMN study_mode TEXT NOT NULL DEFAULT 'full_time' CHECK (study_mode IN ('full_time','part_time','conversion'))");
-}
-if (!hasColumn('users', 'programme_id')) {
-  db.exec('ALTER TABLE users ADD COLUMN programme_id INTEGER REFERENCES programmes(id)');
-}
-if (!hasColumn('courses', 'semester')) {
-  db.exec('ALTER TABLE courses ADD COLUMN semester INTEGER NOT NULL DEFAULT 1');
-}
-if (!hasColumn('course_programmes', 'semester')) {
-  db.exec('ALTER TABLE course_programmes ADD COLUMN semester INTEGER');
-}
-if (!hasColumn('academic_sessions', 'regular_semester')) {
-  db.exec('ALTER TABLE academic_sessions ADD COLUMN regular_semester INTEGER NOT NULL DEFAULT 1');
-  db.exec('ALTER TABLE academic_sessions ADD COLUMN conversion_semester INTEGER NOT NULL DEFAULT 1');
-}
-// Default semester names (editable by the registrar).
-if (!db.prepare('SELECT 1 FROM semesters LIMIT 1').get()) {
-  const ins = db.prepare('INSERT INTO semesters (calendar, number, name) VALUES (?,?,?)');
-  ins.run('regular', 1, 'Harmattan'); ins.run('regular', 2, 'Rain');
-  ins.run('conversion', 1, 'First Semester'); ins.run('conversion', 2, 'Second Semester'); ins.run('conversion', 3, 'Third Semester');
-}
-// An offering is now per (course, session, study mode, semester): rebuild the
-// table once to widen its UNIQUE constraint. Ids are preserved, so timetable
-// entries and enrollments keep pointing at the right rows.
-if (!hasColumn('course_offerings', 'study_mode')) {
-  const schemaSql = require('fs').readFileSync(require('path').join(__dirname, '..', 'db', 'schema.sql'), 'utf8');
-  const ddl = schemaSql.match(/CREATE TABLE IF NOT EXISTS course_offerings \([\s\S]*?\n\);/)[0]
-    .replace('CREATE TABLE IF NOT EXISTS course_offerings', 'CREATE TABLE course_offerings__new');
-  const oldCols = db.prepare('PRAGMA table_info(course_offerings)').all().map(c => c.name).join(', ');
-  db.exec('PRAGMA foreign_keys = OFF');
-  db.exec('BEGIN');
-  try {
-    db.exec(ddl);
-    db.exec(`INSERT INTO course_offerings__new (${oldCols}) SELECT ${oldCols} FROM course_offerings`);
-    db.exec('DROP TABLE course_offerings');
-    db.exec('ALTER TABLE course_offerings__new RENAME TO course_offerings');
-    db.exec('COMMIT');
-  } catch (e) {
-    db.exec('ROLLBACK');
-    throw e;
-  } finally {
-    db.exec('PRAGMA foreign_keys = ON');
-  }
 }
 
 // 3. Courses offered by several programmes: every course already tagged to a

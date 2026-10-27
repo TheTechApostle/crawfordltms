@@ -8,24 +8,17 @@
   </div>
 </div>
 
-<% if (session) { const mode = me.study_mode || 'full_time'; const cur = mode === 'conversion' ? session.conversion_semester : session.regular_semester; %>
-  <p class="text-secondary">
-    <% if (me.programme_name) { %><strong><%= me.programme_name %></strong> · <%= modeLabel(mode) %> · <%= me.level %> level ·<% } else { %><%= me.level %> level ·<% } %>
-    registering for the <strong><%= semLabel(mode, cur) %></strong> semester
-  </p>
-<% } %>
 <div class="card"><div class="card-body">
   <% if (!offerings.length) { %>
-    <p class="text-secondary mb-0">No courses offered for your programme, level and semester yet.</p>
+    <p class="text-secondary mb-0">No courses offered for your level yet this session.</p>
   <% } else { %>
     <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-      <thead><tr><th>Code</th><th>Title</th><th>Type</th><th>Units</th><th>Lecturer</th><th>Dept</th><th></th></tr></thead>
+      <thead><tr><th>Code</th><th>Title</th><th>Units</th><th>Lecturer</th><th>Dept</th><th></th></tr></thead>
       <tbody>
       <% offerings.forEach(function(o){ %>
         <tr>
           <td class="font-monospace"><%= o.code %></td>
           <td><%= o.title %></td>
-          <td><%- include('../partials/course-type-badge', { type: o.course_type }) %></td>
           <td><%= o.credit_units %></td>
           <td><%= o.lecturer_name || 'TBA' %></td>
           <td><%= o.dept_name %></td>

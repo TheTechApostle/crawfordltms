@@ -45,8 +45,6 @@ crawford-ltms/
 
 ## Programme Coordinators, shared courses, and lecturer allocation
 
-**Coordinator tools:** besides adding courses and proposing lecturers one at a time, a coordinator can **bulk-upload courses** (CSV, for the programmes they coordinate — they go to the Dean for approval), **bulk-upload allocations** (`course_code,lecturer_email[,study_mode,semester]` — each row is a proposal for the HOD), and **put themselves forward to teach** a course ("Myself" in the lecturer list, or their own email in the upload). The HOD still approves — it is flagged "coordinator teaching" — and once approved the course appears under **Courses I teach** (the same portal lecturers use for rosters, scheduling and draft slots).
-
 **Who does what**
 
 | | Programme Coordinator | HOD | Dean | Registrar (admin) |
@@ -62,21 +60,11 @@ crawford-ltms/
 - **Courses offered by several programmes / colleges:** `courses.department_id` is the owning department (proposes the course, allocates its lecturer). `course_programmes` lists every programme that offers it; colleges are derived from programme → department → college. Shared courses appear in each programme's/department's/college's views, marked as shared. Manage it from the *Offered by* picker (admin, HOD, coordinator) or the `also_offered_by` column in bulk upload.
 - **Offered to** (`courses.scope`): *selected programmes*, *whole departments* (every programme of the chosen departments), or *all programmes* (university-wide, e.g. GST courses). Department-wide and all-programme courses automatically include programmes created later. In bulk upload, put `ALL` or `DEPT:*` (e.g. `CSC:*`) in `also_offered_by`, alongside any `DEPT:PROG` entries, separated by `|`.
 
-**Course type:** every course is *compulsory* or *elective* (existing courses default to compulsory). Set it when adding/editing a course; it shows on course lists, the Dean's allocation view and the student registration page. **Deleting courses:** an HOD can delete any course of their department (single or ticked in bulk), the registrar can do the same per department (filter, tick, delete). Offerings and draft timetable slots go with it; courses with student registrations or a final/published timetable are kept and reported.
-
-**Bulk course upload** (registrar → *Bulk upload courses*): CSV columns `code,title,level,credit_units,department_code,programme_code,expected_class_size,also_offered_by,course_type` (`also_offered_by` = `DEPT:PROG|DEPT:PROG`). A template can be downloaded from the page.
+**Bulk course upload** (registrar → *Bulk upload courses*): CSV columns `code,title,level,credit_units,department_code,programme_code,expected_class_size,also_offered_by` (`also_offered_by` = `DEPT:PROG|DEPT:PROG`). A template can be downloaded from the page.
 
 **Registrar housekeeping:** *Staff accounts* (create/edit/delete Deans, HODs, Coordinators, Lecturers), student edit/add, venues belong to a college (or are shared), and every category page now reports duplicate/in-use errors instead of failing silently.
 
 Existing databases upgrade automatically on start-up (new columns, wider `users.role` check, backfilled `course_programmes`; existing lecturer assignments count as approved). Demo coordinator: `coord.cs@crawford.edu.ng` (Computer Science programme).
-
-## Study modes, semesters, and levels that differ per programme
-
-- **Study mode** (`programmes.study_mode`): *full-time*, *part-time* or *conversion (HND → BSc)*. The same degree in another mode is its own programme (e.g. "Computer Science (Part-time)").
-- **Semesters**: full-time and part-time run **Harmattan** and **Rain**; conversion runs **three** semesters (names editable under *Academic sessions → Semesters*). A session is now an academic year (e.g. `2025/2026`); each session records the **current semester** of each calendar. Registration, the allocation engine, timetables and the lecturer/student portals work on the current semester only, while planning views (allocation, offering lists) show the whole year.
-- **Different level / semester per programme**: `courses.level` and `courses.semester` belong to the course's home programme. Any other programme that offers it can take it at another level and/or semester (`course_programmes.level` / `.semester`) — set from the *Level & semester per programme* button (admin, HOD, coordinator), when adding an existing course to a programme, or in bulk upload with `CSC:CS@300/2` (programme CS at 300 level, semester 2). Example in the demo data: CYB201 is Cyber Security 200L Harmattan, Computer Science 300L Rain, Conversion 300L semester 3.
-- **Offerings**: "Offer this session" creates one offering per distinct *(study mode, semester)* among the programmes that take the course, each with its own lecturer, class list and timetable slot.
-- **Students** now have a programme (chosen at sign-up or by the registrar), which decides the study mode and which course levels/semesters they see. Students without a programme fall back to matching on level only.
 
 ## Getting started
 

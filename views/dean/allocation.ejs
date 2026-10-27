@@ -89,15 +89,14 @@
       <p class="text-secondary mb-0">No courses offered this session here yet.</p>
     <% } else { %>
     <div class="table-responsive"><table class="table table-hover align-middle mb-0">
-      <thead><tr><th>Course</th><th>Level</th><th>Mode · Semester</th><th>Offered by</th><th>Lecturer in charge</th><th>Allocation</th><th>Registered</th><th>Timetable</th></tr></thead>
+      <thead><tr><th>Course</th><th>Level</th><th>Offered by</th><th>Lecturer in charge</th><th>Allocation</th><th>Registered</th><th>Timetable</th></tr></thead>
       <tbody>
       <% rows.forEach(function(o){ %>
         <tr>
-          <td><span class="font-monospace"><%= o.code %></span> — <%= o.title %> <%- include('../partials/course-type-badge', { type: o.course_type }) %>
+          <td><span class="font-monospace"><%= o.code %></span> — <%= o.title %>
             <% if (o.shared) { %><div class="form-text mb-0"><i class="fa-solid fa-share-nodes me-1"></i>Shared · owned by <%= o.home_dept_name %><%= o.home_college_name && o.home_college_id !== college.id ? ' (' + o.home_college_name + ')' : '' %></div><% } %>
           </td>
           <td><%= o.level %></td>
-          <td class="small"><%= modeShort(o.study_mode) %> · <%= semLabel(o.study_mode, o.semester) %></td>
           <td><%- include('../partials/programme-badges', { list: o.programmes, homeId: o.home_programme_id, info: o.info }) %></td>
           <td>
             <% if (o.lecturer_name) { %><%= o.lecturer_name %><div class="form-text mb-0"><%= o.lecturer_email %></div><% } else { %><span class="text-secondary">— unassigned —</span><% } %>

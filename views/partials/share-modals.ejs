@@ -49,7 +49,7 @@
               <div class="form-check">
                 <input class="form-check-input" type="checkbox" name="programme_ids" value="<%= p.id %>" id="sh<%= c.id %>_<%= p.id %>"
                        <%= (have.has(p.id) || home) ? 'checked' : '' %> <%= home ? 'disabled' : '' %>>
-                <label class="form-check-label" for="sh<%= c.id %>_<%= p.id %>"><%= p.name %> <span class="text-secondary small">(<%= p.dept_name %><%= p.study_mode && p.study_mode !== 'full_time' ? ' · ' + modeShort(p.study_mode) : '' %>)</span><%= home ? ' — home programme' : '' %></label>
+                <label class="form-check-label" for="sh<%= c.id %>_<%= p.id %>"><%= p.name %> <span class="text-secondary small">(<%= p.dept_code %>)</span><%= home ? ' — home programme' : '' %></label>
               </div>
             <% }) %>
           <% }) %>
